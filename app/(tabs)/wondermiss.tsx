@@ -1,8 +1,8 @@
+import { useFonts } from "expo-font";
 import {
   Poppins_400Regular,
   Poppins_600SemiBold,
   Poppins_700Bold,
-  useFonts,
 } from "@expo-google-fonts/poppins";
 import { useRouter } from "expo-router";
 import { useContext, useEffect, useState } from "react";
