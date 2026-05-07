@@ -3,9 +3,9 @@ import { CardType } from "../types/Card";
 import { loadCollection, saveCollection } from "../utils/storage";
 
 type GameContextType = {
-  coins: number;
-  unlimitedCoins: boolean;
-  spendCoins: (amount: number) => boolean;
+  ancestors: number;
+  spendAncestors: (amount: number) => boolean;
+  addAncestors: (amount: number) => void;
   collection: CardType[];
   addCards: (cards: CardType[]) => void;
 };
@@ -13,9 +13,8 @@ type GameContextType = {
 export const GameContext = createContext({} as GameContextType);
 
 export function GameProvider({ children }: { children: ReactNode }) {
-  const [coins, setCoins] = useState(999999);
+  const [ancestors, setAncestors] = useState(10);
   const [collection, setCollection] = useState<CardType[]>([]);
-  const unlimitedCoins = true;
 
   useEffect(() => {
     loadCollection().then(setCollection);
@@ -25,11 +24,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     saveCollection(collection);
   }, [collection]);
 
-  const spendCoins = (amount: number) => {
-    if (unlimitedCoins) return true;
-    if (coins < amount) return false;
-    setCoins((prev) => prev - amount);
+  const spendAncestors = (amount: number) => {
+    if (ancestors < amount) return false;
+    setAncestors((prev) => prev - amount);
     return true;
+  };
+
+  const addAncestors = (amount: number) => {
+    setAncestors((prev) => prev + amount);
   };
 
   const addCards = (cards: CardType[]) => {
@@ -38,7 +40,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   return (
     <GameContext.Provider
-      value={{ coins, unlimitedCoins, spendCoins, collection, addCards }}
+      value={{
+        ancestors,
+        spendAncestors,
+        addAncestors,
+        collection,
+        addCards,
+      }}
     >
       {children}
     </GameContext.Provider>
