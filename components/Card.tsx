@@ -13,6 +13,19 @@ function getShinyRarityLabel(shinyRarity?: string): string {
 	}
 }
 
+function formatRarity(rarity: CardType["rarity"]) {
+	const labels: Record<CardType["rarity"], string> = {
+		common: "Common",
+		uncommon: "Uncommon",
+		rare: "Rare",
+		ultraRare: "Ultra Rare",
+		illustrationRare: "Illustration Rare",
+		specialIllustrationRare: "Special Illustration Rare",
+		hyperRare: "Hyper Rare",
+};
+	return labels[rarity] || "Common";
+}
+
 export default function Card({ card }: { card: CardType }) {
 	return (
 		<View style={styles.card}>
@@ -45,14 +58,20 @@ const styles = StyleSheet.create({
 		height: 170,
 		borderRadius: 10,
 	},
+	shinyCard: {
+		backgroundColor: "#fff8d6",
+		borderColor: "#ffcc00",
+	},
 	shinyBadge: {
-		position: "absolute",
-		top: 8,
-		right: 8,
-		backgroundColor: "rgba(255, 214, 77, 0.95)",
-		borderRadius: 8,
-		paddingHorizontal: 6,
-		paddingVertical: 2,
+		alignSelf: "flex-start",
+		backgroundColor: "#b8860b",
+		color: "#fff",
+		paddingHorizontal: 7,
+		paddingVertical: 3,
+		borderRadius: 999,
+		fontSize: 10,
+		fontWeight: "bold",
+		marginBottom: 5,
 	},
 	shinyText: {
 		color: "#663f00",

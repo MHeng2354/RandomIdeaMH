@@ -1,307 +1,350 @@
+import {
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  useFonts,
+} from "@expo-google-fonts/poppins";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useContext } from "react";
-import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { GameContext } from "../../context/GameContext";
 
-export default function Home() {
-	const router = useRouter();
-	const { ancestors, collection } = useContext(GameContext);
-	const canUseWonderMiss = ancestors >= 10;
+export default function HomeScreen() {
+  const router = useRouter();
+  const { ancestors, collection } = useContext(GameContext);
 
-	return (
-		<SafeAreaView style={styles.container}>
-			<View style={styles.backgroundLayer} />
-			<View style={styles.heroCard}>
-				<View style={styles.heroGlow} />
-				<View style={styles.heroGlowSecondary} />
-				<View style={styles.heroHeader}>
-					<View>
-						<Text style={styles.welcome}>Welcome back!</Text>
-						<Text style={styles.subheading}>
-							Your collection is shining brighter than ever.
-						</Text>
-					</View>
-					<Ionicons name="sparkles" size={30} color="#ffd24d" />
-				</View>
-				<Text style={styles.subtitle}>
-					Open packs, unlock shinies, and build the ultimate team.
-				</Text>
-				<View style={styles.heroBadge}>
-					<Text style={styles.heroBadgeText}>
-						Featured: Shiny pulls are on the rise
-					</Text>
-				</View>
-				<View style={styles.statsRow}>
-					<View style={styles.statBubble}>
-						<Text style={styles.statLabel}>Ancestors</Text>
-						<Text style={styles.statValue}>{ancestors}</Text>
-					</View>
-					<View style={styles.statBubble}>
-						<Text style={styles.statLabel}>Collection</Text>
-						<Text style={styles.statValue}>{collection.length}</Text>
-					</View>
-				</View>
-			</View>
+  const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+  });
 
-			<View style={styles.quickRow}>
-				<View style={[styles.quickCard, styles.quickCardOrange]}>
-					<Ionicons name="albums" size={22} color="#fff" />
-					<Text style={styles.quickTitleLight}>Packs</Text>
-					<Text style={styles.quickTextLight}>
-						Open bundles, chase rares, and collect your favorites.
-					</Text>
-				</View>
-				<View style={[styles.quickCard, styles.quickCardBlue]}>
-					<Ionicons name="flash" size={22} color="#fff" />
-					<Text style={styles.quickTitleLight}>WonderMiss</Text>
-					<Text style={styles.quickTextLight}>
-						Take a chance on high-volatility pulls with big rewards.
-					</Text>
-				</View>
-			</View>
+  if (!fontsLoaded) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#ff4b2b" />
+      </SafeAreaView>
+    );
+  }
 
-			<View style={styles.buttonRow}>
-				<Pressable
-					style={styles.actionButton}
-					onPress={() => router.push("/pack")}
-				>
-					<Text style={styles.buttonText}>Browse Packs</Text>
-				</Pressable>
-				<Pressable
-					style={styles.actionButton}
-					onPress={() => router.push("/collection")}
-				>
-					<Text style={styles.buttonText}>View Collection</Text>
-				</Pressable>
-				<Pressable
-					style={[
-						styles.actionButton,
-						!canUseWonderMiss && styles.disabledButton,
-					]}
-					onPress={() => router.push("/wondermiss")}
-					disabled={!canUseWonderMiss}
-				>
-					<Text style={styles.buttonText}>Try WonderMiss</Text>
-				</Pressable>
-			</View>
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.container}
+      >
+        <View style={styles.heroCard}>
+          <View style={styles.heroDecoration} />
 
-			<View style={styles.summaryCard}>
-				<Text style={styles.summaryTitle}>Today’s mission</Text>
-				<Text style={styles.summaryText}>
-					Open a shiny pack, grow your collection, and see if luck is on your
-					side.
-				</Text>
-				<View style={styles.summaryPillRow}>
-					<View style={styles.summaryPill}>
-						<Text style={styles.summaryPillText}>+0.2% shiny boost</Text>
-					</View>
-					<View style={styles.summaryPill}>
-						<Text style={styles.summaryPillText}>Top pulls highlighted</Text>
-					</View>
-				</View>
-			</View>
-		</SafeAreaView>
-	);
+          <View style={styles.heroTop}>
+            <View style={styles.heroTextBox}>
+              <Text style={styles.heroTitle}>Welcome back!</Text>
+              <Text style={styles.heroSubtitle}>
+                Your collection is shining brighter than ever.
+              </Text>
+              <Text style={styles.heroDescription}>
+                Open packs, unlock shinies, and build the ultimate team.
+              </Text>
+            </View>
+
+            <View style={styles.sparkleBadge}>
+              <Ionicons name="sparkles" size={30} color="#ffd84d" />
+            </View>
+          </View>
+
+          <View style={styles.featureBadge}>
+            <Text style={styles.featureText}>
+              Featured: Shiny pulls are on the rise
+            </Text>
+          </View>
+
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Ancestors</Text>
+              <Text style={styles.statValue}>{ancestors}</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Collection</Text>
+              <Text style={styles.statValue}>{collection.length}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.featureRow}>
+          <Pressable
+            style={[styles.featureCard, styles.packCard]}
+            onPress={() => router.push("/(tabs)/pack")}
+          >
+            <Ionicons name="file-tray-full" size={25} color="#fff" />
+            <Text style={styles.featureCardTitle}>Packs</Text>
+            <Text style={styles.featureCardText}>
+              Open bundles, chase rares, and collect your favorites.
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[styles.featureCard, styles.wonderCard]}
+            onPress={() => router.push("/(tabs)/wondermiss")}
+          >
+            <Ionicons name="flash" size={26} color="#fff" />
+            <Text style={styles.featureCardTitle}>WonderMiss</Text>
+            <Text style={styles.featureCardText}>
+              Take a chance on high-volatility pulls with big rewards.
+            </Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.actionRow}>
+          <Pressable
+            style={styles.actionButton}
+            onPress={() => router.push("/(tabs)/pack")}
+          >
+            <Text style={styles.actionButtonText}>Browse Packs</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.actionButton}
+            onPress={() => router.push("/(tabs)/collection")}
+          >
+            <Text style={styles.actionButtonText}>View Collection</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.actionButton}
+            onPress={() => router.push("/(tabs)/wondermiss")}
+          >
+            <Text style={styles.actionButtonText}>Try WonderMiss</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.missionCard}>
+          <Text style={styles.missionTitle}>Today’s mission</Text>
+          <Text style={styles.missionText}>
+            Open a shiny pack, grow your collection, and see if luck is on your
+            side.
+          </Text>
+
+          <View style={styles.missionTagRow}>
+            <View style={styles.missionTag}>
+              <Text style={styles.missionTagText}>+0.2% shiny boost</Text>
+            </View>
+
+            <View style={styles.missionTag}>
+              <Text style={styles.missionTagText}>Top pulls highlighted</Text>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
 
+const FONT = {
+  regular: "Poppins_400Regular",
+  medium: "Poppins_500Medium",
+  semiBold: "Poppins_600SemiBold",
+  bold: "Poppins_700Bold",
+};
+
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		backgroundColor: "#ecf3ff",
-		paddingHorizontal: 20,
-		paddingTop: 50,
-	},
-	backgroundLayer: {
-		position: "absolute",
-		top: 0,
-		left: 0,
-		right: 0,
-		height: 260,
-		backgroundColor: "#4051b5",
-		borderBottomLeftRadius: 40,
-		borderBottomRightRadius: 40,
-	},
-	heroCard: {
-		marginTop: 10,
-		backgroundColor: "#142452",
-		borderRadius: 32,
-		padding: 24,
-		overflow: "hidden",
-		shadowColor: "#000",
-		shadowOpacity: 0.16,
-		shadowRadius: 24,
-		shadowOffset: { width: 0, height: 14 },
-		marginBottom: 18,
-	},
-	heroGlow: {
-		position: "absolute",
-		top: -36,
-		right: -36,
-		width: 140,
-		height: 140,
-		borderRadius: 70,
-		backgroundColor: "rgba(255, 209, 77, 0.16)",
-	},
-	heroGlowSecondary: {
-		position: "absolute",
-		top: 50,
-		left: -40,
-		width: 100,
-		height: 100,
-		borderRadius: 50,
-		backgroundColor: "rgba(39, 168, 232, 0.14)",
-	},
-	heroHeader: {
-		flexDirection: "row",
-		alignItems: "flex-start",
-		justifyContent: "space-between",
-		marginBottom: 16,
-	},
-	welcome: {
-		fontSize: 30,
-		fontWeight: "800",
-		color: "#fff",
-	},
-	subheading: {
-		fontSize: 14,
-		color: "#cbd7ff",
-		marginTop: 8,
-		lineHeight: 20,
-	},
-	subtitle: {
-		fontSize: 15,
-		color: "#b8c8ff",
-		marginBottom: 20,
-		lineHeight: 22,
-	},
-	heroBadge: {
-		alignSelf: "flex-start",
-		backgroundColor: "rgba(255, 255, 255, 0.12)",
-		paddingVertical: 8,
-		paddingHorizontal: 14,
-		borderRadius: 999,
-		marginBottom: 22,
-	},
-	heroBadgeText: {
-		color: "#f7f7ff",
-		fontSize: 12,
-		fontWeight: "700",
-	},
-	statsRow: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		gap: 12,
-	},
-	statBubble: {
-		flex: 1,
-		backgroundColor: "rgba(255,255,255,0.12)",
-		borderRadius: 22,
-		paddingVertical: 18,
-		paddingHorizontal: 16,
-	},
-	statLabel: {
-		color: "#9bb6ff",
-		fontSize: 12,
-		marginBottom: 8,
-	},
-	statValue: {
-		fontSize: 30,
-		fontWeight: "800",
-		color: "#fff",
-	},
-	quickRow: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		gap: 12,
-		marginBottom: 20,
-	},
-	quickCard: {
-		flex: 1,
-		borderRadius: 22,
-		padding: 18,
-		shadowColor: "#000",
-		shadowOpacity: 0.08,
-		shadowRadius: 16,
-		shadowOffset: { width: 0, height: 8 },
-	},
-	quickCardOrange: {
-		backgroundColor: "#ff8a5d",
-	},
-	quickCardBlue: {
-		backgroundColor: "#4d88ff",
-	},
-	quickTitleLight: {
-		fontSize: 16,
-		fontWeight: "800",
-		color: "#fff",
-		marginTop: 12,
-		marginBottom: 8,
-	},
-	quickTextLight: {
-		fontSize: 13,
-		color: "rgba(255,255,255,0.92)",
-		lineHeight: 20,
-	},
-	buttonRow: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		justifyContent: "space-between",
-		gap: 10,
-		marginBottom: 18,
-	},
-	actionButton: {
-		flex: 1,
-		minWidth: 110,
-		paddingVertical: 16,
-		borderRadius: 18,
-		backgroundColor: "#ff5a2a",
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	disabledButton: {
-		backgroundColor: "#9eabbf",
-	},
-	buttonText: {
-		color: "#fff",
-		fontSize: 14,
-		fontWeight: "800",
-	},
-	summaryCard: {
-		backgroundColor: "#fff",
-		borderRadius: 24,
-		padding: 20,
-		shadowColor: "#000",
-		shadowOpacity: 0.06,
-		shadowRadius: 18,
-		shadowOffset: { width: 0, height: 8 },
-	},
-	summaryTitle: {
-		fontSize: 18,
-		fontWeight: "800",
-		color: "#142452",
-		marginBottom: 10,
-	},
-	summaryText: {
-		fontSize: 14,
-		lineHeight: 20,
-		color: "#546485",
-		marginBottom: 16,
-	},
-	summaryPillRow: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		gap: 10,
-	},
-	summaryPill: {
-		backgroundColor: "#f0f5ff",
-		paddingVertical: 10,
-		paddingHorizontal: 14,
-		borderRadius: 16,
-	},
-	summaryPillText: {
-		fontSize: 12,
-		fontWeight: "700",
-		color: "#4051b5",
-	},
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#eef4ff",
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: "#eef4ff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  container: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 26,
+  },
+  heroCard: {
+    width: "100%",
+    backgroundColor: "#12265a",
+    borderRadius: 28,
+    padding: 26,
+    overflow: "hidden",
+  },
+  heroDecoration: {
+    position: "absolute",
+    width: 132,
+    height: 132,
+    borderRadius: 66,
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
+    top: -8,
+    right: -10,
+  },
+  heroTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  heroTextBox: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  heroTitle: {
+    fontSize: 28,
+    lineHeight: 36,
+    color: "#fff",
+    fontFamily: FONT.bold,
+  },
+  heroSubtitle: {
+    marginTop: 10,
+    fontSize: 14,
+    lineHeight: 22,
+    color: "#d9e3ff",
+    fontFamily: FONT.regular,
+  },
+  heroDescription: {
+    marginTop: 18,
+    fontSize: 15,
+    lineHeight: 24,
+    color: "#aebdec",
+    fontFamily: FONT.regular,
+  },
+  sparkleBadge: {
+    width: 72,
+    height: 72,
+    borderRadius: 26,
+    backgroundColor: "rgba(255, 255, 255, 0.11)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  featureBadge: {
+    marginTop: 24,
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(255, 255, 255, 0.13)",
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 16,
+  },
+  featureText: {
+    color: "#fff",
+    fontSize: 12,
+    fontFamily: FONT.bold,
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: 14,
+    marginTop: 24,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: "#354577",
+    borderRadius: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 20,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: "#aebdec",
+    fontFamily: FONT.regular,
+  },
+  statValue: {
+    marginTop: 10,
+    fontSize: 31,
+    color: "#fff",
+    fontFamily: FONT.bold,
+  },
+  featureRow: {
+    flexDirection: "row",
+    gap: 14,
+    marginTop: 20,
+  },
+  featureCard: {
+    flex: 1,
+    minHeight: 158,
+    borderRadius: 20,
+    padding: 18,
+    justifyContent: "space-between",
+  },
+  packCard: {
+    backgroundColor: "#ff815c",
+  },
+  wonderCard: {
+    backgroundColor: "#4e84f5",
+  },
+  featureCardTitle: {
+    marginTop: 12,
+    fontSize: 18,
+    color: "#fff",
+    fontFamily: FONT.bold,
+  },
+  featureCardText: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 22,
+    color: "#fff",
+    fontFamily: FONT.regular,
+  },
+  actionRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 18,
+  },
+  actionButton: {
+    flex: 1,
+    backgroundColor: "#ff4b2b",
+    borderRadius: 15,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionButtonText: {
+    color: "#fff",
+    fontSize: 13,
+    textAlign: "center",
+    fontFamily: FONT.bold,
+  },
+  missionCard: {
+    marginTop: 20,
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 22,
+  },
+  missionTitle: {
+    fontSize: 19,
+    color: "#12265a",
+    fontFamily: FONT.bold,
+  },
+  missionText: {
+    marginTop: 12,
+    fontSize: 14,
+    lineHeight: 23,
+    color: "#65708d",
+    fontFamily: FONT.regular,
+  },
+  missionTagRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 18,
+  },
+  missionTag: {
+    flex: 1,
+    backgroundColor: "#f4f7ff",
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  missionTagText: {
+    fontSize: 11,
+    color: "#4260a8",
+    fontFamily: FONT.bold,
+  },
 });
