@@ -194,7 +194,7 @@ const FONT = {
 const styles = StyleSheet.create({
 	container: {
 		paddingHorizontal: 16,
-		paddingTop: 14,
+		paddingTop: 45,
 		paddingBottom: 24,
 		backgroundColor: "#fff",
 		alignItems: "center",
@@ -215,12 +215,12 @@ const styles = StyleSheet.create({
 	},
 	loadingTitle: {
 		marginTop: 14,
-		fontSize: 26,
+		fontSize: 30,
 		color: "#111",
 		fontFamily: FONT.bold,
 	},
 	title: {
-		fontSize: 26,
+		fontSize: 30,
 		fontFamily: FONT.bold,
 		marginBottom: 8,
 	},

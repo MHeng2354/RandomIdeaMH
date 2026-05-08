@@ -13,7 +13,7 @@ type GameContextType = {
 export const GameContext = createContext({} as GameContextType);
 
 export function GameProvider({ children }: { children: ReactNode }) {
-  const [ancestors, setAncestors] = useState(10);
+  const [ancestors, setAncestors] = useState(50);
   const [collection, setCollection] = useState<CardType[]>([]);
 
   useEffect(() => {

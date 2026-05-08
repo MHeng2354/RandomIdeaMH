@@ -377,6 +377,7 @@ const FONT = {
 const styles = StyleSheet.create({
 	container: {
 		padding: 20,
+		paddingTop: 45,
 		paddingBottom: 50,
 		alignItems: "center",
 		backgroundColor: "#fff",

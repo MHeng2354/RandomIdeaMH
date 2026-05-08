@@ -11,7 +11,7 @@ import {
 import { GameContext } from "../../context/GameContext";
 import { CardType } from "../../types/Card";
 
-type SortOption = "name" | "rarity";
+type RarityFilter = CardType["rarity"] | "all";
 
 const RARITY_ORDER: CardType["rarity"][] = [
 	"common",
@@ -25,9 +25,13 @@ const RARITY_ORDER: CardType["rarity"][] = [
 
 export default function Collection() {
 	const { collection } = useContext(GameContext);
-	const [sortBy, setSortBy] = useState<SortOption>("name");
+	const [selectedRarity, setSelectedRarity] = useState<RarityFilter>("all");
 	const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
 	const [modalVisible, setModalVisible] = useState(false);
+	const [rarityPickerVisible, setRarityPickerVisible] = useState(false);
+	const [collapsedRarities, setCollapsedRarities] = useState<
+		Partial<Record<CardType["rarity"], boolean>>
+	>({});
 
 	type CardWithCount = CardType & { count: number };
 
@@ -53,35 +57,29 @@ export default function Collection() {
 			grouped[card.rarity].push(cardWithCount);
 		});
 
-		// Sort within each group
+		// Sort within each group by name
 		Object.keys(grouped).forEach((rarity) => {
-			grouped[rarity].sort((a, b) => {
-				if (sortBy === "name") {
-					return a.name.localeCompare(b.name);
-				}
-				return 0; // Keep original order for rarity sort
-			});
+			grouped[rarity].sort((a, b) => a.name.localeCompare(b.name));
 		});
 
-		// Create sections
-		const sections = RARITY_ORDER.filter((rarity) => grouped[rarity]).map(
-			(rarity) => {
-				const totalCards = grouped[rarity].reduce(
-					(sum, card) => sum + card.count,
-					0,
-				);
-				return {
-					title: rarity
-						.replace(/([A-Z])/g, " $1")
-						.replace(/^./, (str) => str.toUpperCase()),
-					data: grouped[rarity],
-					totalCards,
-				};
-			},
-		);
+		const filteredRarities =
+			selectedRarity === "all" ? RARITY_ORDER : [selectedRarity];
+
+		const sections = filteredRarities.map((rarity) => {
+			const cards = grouped[rarity] ?? [];
+			const totalCards = cards.reduce((sum, card) => sum + card.count, 0);
+			return {
+				rarity,
+				title: rarity
+					.replace(/([A-Z])/g, " $1")
+					.replace(/^./, (str) => str.toUpperCase()),
+				data: cards,
+				totalCards,
+			};
+		});
 
 		return sections;
-	}, [collection, sortBy]);
+	}, [collection, selectedRarity]);
 
 	const handleCardPress = (card: CardType) => {
 		setSelectedCard(card);
@@ -107,34 +105,73 @@ export default function Collection() {
 		</TouchableOpacity>
 	);
 
+	const toggleRarityCollapse = (rarity: CardType["rarity"]) => {
+		setCollapsedRarities((current) => ({
+			...current,
+			[rarity]: !current[rarity],
+		}));
+	};
+
+	const formatRarityLabel = (rarity: RarityFilter) =>
+		rarity === "all"
+			? "All"
+			: rarity
+					.replace(/([A-Z])/g, " $1")
+					.replace(/^./, (str) => str.toUpperCase());
+
+	const filterOptions: RarityFilter[] = ["all", ...RARITY_ORDER];
+
+	const selectRarity = (rarity: RarityFilter) => {
+		setSelectedRarity(rarity);
+		setRarityPickerVisible(false);
+	};
+
 	const renderSection = ({
 		item,
 	}: {
-		item: { title: string; data: CardWithCount[]; totalCards: number };
-	}) => (
-		<View key={item.title} style={styles.section}>
-			<View style={styles.sectionHeader}>
-				<Text style={styles.sectionTitle}>
-					{item.title} ({item.data.length} unique, {item.totalCards} total)
-				</Text>
+		item: {
+			title: string;
+			rarity: CardType["rarity"];
+			data: CardWithCount[];
+			totalCards: number;
+		};
+	}) => {
+		const isCollapsed = collapsedRarities[item.rarity] ?? false;
+		return (
+			<View key={item.title} style={styles.section}>
+				<TouchableOpacity
+					style={styles.sectionHeader}
+					onPress={() => toggleRarityCollapse(item.rarity)}
+				>
+					<Text style={styles.sectionTitle}>
+						{item.title} ({item.data.length} unique, {item.totalCards} total)
+					</Text>
+					<Text style={styles.sectionToggle}>{isCollapsed ? "+" : "–"}</Text>
+				</TouchableOpacity>
+				{!isCollapsed ? (
+					<FlatList
+						data={item.data}
+						keyExtractor={(card) => card.id}
+						renderItem={renderCard}
+						numColumns={3}
+						columnWrapperStyle={styles.row}
+						scrollEnabled={false}
+						showsVerticalScrollIndicator={false}
+						contentContainerStyle={
+							item.data.length === 0 ? styles.emptySection : undefined
+						}
+						ListEmptyComponent={
+							<Text style={styles.empty}>No cards in this rarity.</Text>
+						}
+					/>
+				) : (
+					<Text style={styles.collapsedText}>
+						Tap to expand this rarity group.
+					</Text>
+				)}
 			</View>
-			<FlatList
-				data={item.data}
-				keyExtractor={(card) => card.id}
-				renderItem={renderCard}
-				numColumns={3}
-				columnWrapperStyle={styles.row}
-				scrollEnabled={false}
-				showsVerticalScrollIndicator={false}
-				contentContainerStyle={
-					item.data.length === 0 ? styles.emptySection : undefined
-				}
-				ListEmptyComponent={
-					<Text style={styles.empty}>No cards in this rarity.</Text>
-				}
-			/>
-		</View>
-	);
+		);
+	};
 
 	return (
 		<View style={styles.container}>
@@ -142,38 +179,49 @@ export default function Collection() {
 
 			<View style={styles.sortContainer}>
 				<TouchableOpacity
-					style={[
-						styles.sortButton,
-						sortBy === "name" && styles.sortButtonActive,
-					]}
-					onPress={() => setSortBy("name")}
+					style={[styles.sortButton, styles.filterButton]}
+					onPress={() => setRarityPickerVisible(true)}
 				>
-					<Text
-						style={[
-							styles.sortButtonText,
-							sortBy === "name" && styles.sortButtonTextActive,
-						]}
-					>
-						Sort by Name
-					</Text>
-				</TouchableOpacity>
-				<TouchableOpacity
-					style={[
-						styles.sortButton,
-						sortBy === "rarity" && styles.sortButtonActive,
-					]}
-					onPress={() => setSortBy("rarity")}
-				>
-					<Text
-						style={[
-							styles.sortButtonText,
-							sortBy === "rarity" && styles.sortButtonTextActive,
-						]}
-					>
-						Sort by Rarity
+					<Text style={[styles.sortButtonText, styles.sortButtonTextActive]}>
+						Filter: {formatRarityLabel(selectedRarity)}
 					</Text>
 				</TouchableOpacity>
 			</View>
+
+			<Modal
+				visible={rarityPickerVisible}
+				transparent={true}
+				animationType="fade"
+				onRequestClose={() => setRarityPickerVisible(false)}
+			>
+				<TouchableOpacity
+					style={styles.modalOverlay}
+					activeOpacity={1}
+					onPress={() => setRarityPickerVisible(false)}
+				>
+					<View style={styles.filterModalContent}>
+						{filterOptions.map((rarity) => (
+							<TouchableOpacity
+								key={rarity}
+								style={[
+									styles.filterOption,
+									selectedRarity === rarity && styles.filterOptionActive,
+								]}
+								onPress={() => selectRarity(rarity)}
+							>
+								<Text
+									style={[
+										styles.filterOptionText,
+										selectedRarity === rarity && styles.filterOptionTextActive,
+									]}
+								>
+									{formatRarityLabel(rarity)}
+								</Text>
+							</TouchableOpacity>
+						))}
+					</View>
+				</TouchableOpacity>
+			</Modal>
 
 			<FlatList
 				data={groupedAndSortedCards}
@@ -215,12 +263,12 @@ export default function Collection() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		paddingTop: 20,
+		paddingTop: 45,
 		paddingHorizontal: 12,
 		backgroundColor: "#fff",
 	},
 	title: {
-		fontSize: 26,
+		fontSize: 30,
 		fontWeight: "bold",
 		textAlign: "center",
 		marginBottom: 16,
@@ -228,14 +276,42 @@ const styles = StyleSheet.create({
 	sortContainer: {
 		flexDirection: "row",
 		justifyContent: "center",
+		alignItems: "center",
 		marginBottom: 16,
-		gap: 8,
 	},
 	sortButton: {
 		paddingHorizontal: 16,
 		paddingVertical: 8,
 		borderRadius: 20,
-		backgroundColor: "#f0f0f0",
+		backgroundColor: "#2c9cff",
+	},
+	filterButton: {
+		minWidth: 180,
+		alignItems: "center",
+	},
+	filterModalContent: {
+		width: "90%",
+		backgroundColor: "#fff",
+		borderRadius: 12,
+		padding: 16,
+	},
+	filterOption: {
+		paddingVertical: 14,
+		paddingHorizontal: 12,
+		borderRadius: 10,
+		marginBottom: 10,
+		backgroundColor: "#f5f5f5",
+	},
+	filterOptionActive: {
+		backgroundColor: "#0dade3",
+	},
+	filterOptionText: {
+		fontSize: 16,
+		color: "#333",
+	},
+	filterOptionTextActive: {
+		color: "#fff",
+		fontWeight: "bold",
 	},
 	sortButtonActive: {
 		backgroundColor: "#e3350d",
@@ -306,11 +382,27 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 12,
 		marginBottom: 8,
 		borderRadius: 8,
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
 	},
 	sectionTitle: {
 		fontSize: 18,
 		fontWeight: "bold",
 		color: "#333",
+		flex: 1,
+	},
+	sectionToggle: {
+		fontSize: 22,
+		fontWeight: "700",
+		color: "#333",
+		marginLeft: 12,
+	},
+	collapsedText: {
+		textAlign: "center",
+		color: "#666",
+		fontSize: 14,
+		paddingVertical: 12,
 	},
 	emptySection: {
 		paddingBottom: 0,
