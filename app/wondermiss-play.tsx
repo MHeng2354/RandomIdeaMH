@@ -23,7 +23,7 @@ import {
 	loadWherePickSession,
 } from "../utils/wherePickStorage";
 
-export default function WherePickPlay() {
+export default function WonderMissPlay() {
 	const router = useRouter();
 	const { addCards } = useContext(GameContext);
 
@@ -52,7 +52,7 @@ export default function WherePickPlay() {
 		const session = await loadWherePickSession();
 
 		if (!session) {
-			Alert.alert("No Session", "Please start WherePick again.");
+			Alert.alert("No Session", "Please start WonderMiss again.");
 			router.replace("/(tabs)/wondermiss");
 			return;
 		}
@@ -125,7 +125,7 @@ export default function WherePickPlay() {
 		setRevealing(false);
 	};
 
-	const backToWherePick = () => {
+	const backToWonderMiss = () => {
 		router.replace("/(tabs)/wondermiss");
 	};
 
@@ -138,14 +138,14 @@ export default function WherePickPlay() {
 		return (
 			<View style={styles.center}>
 				<ActivityIndicator size="large" />
-				<Text style={styles.loadingText}>Preparing WherePick...</Text>
+				<Text style={styles.loadingText}>Preparing WonderMiss...</Text>
 			</View>
 		);
 	}
 
 	return (
 		<View style={styles.container}>
-			<Text style={styles.title}>WherePick</Text>
+			<Text style={styles.title}>WonderMiss</Text>
 
 			{isHighRareSession && (
 				<Text style={styles.specialText}>Special High Rare Session!</Text>
@@ -209,8 +209,8 @@ export default function WherePickPlay() {
 					<Text style={styles.cardName}>{selectedCard.name}</Text>
 					<Text style={styles.rarity}>{formatRarity(selectedCard.rarity)}</Text>
 
-					<Pressable style={styles.doneButton} onPress={backToWherePick}>
-						<Text style={styles.doneButtonText}>End WherePick</Text>
+					<Pressable style={styles.doneButton} onPress={backToWonderMiss}>
+						<Text style={styles.doneButtonText}>End WonderMiss</Text>
 					</Pressable>
 				</View>
 			)}
