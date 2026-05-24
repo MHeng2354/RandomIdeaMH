@@ -9,6 +9,7 @@ import {
 	ActivityIndicator,
 	Alert,
 	Image,
+	PanResponder,
 	Pressable,
 	ScrollView,
 	StyleSheet,
@@ -62,7 +63,24 @@ export default function Pack() {
 		return lastPack ? [lastPack, ...otherPacks] : packs;
 	}, [lastPackId]);
 
+	const loadPackCards = async (packId: string) => {
+		const pack = packs.find((item) => item.id === packId);
+
+		if (!pack) {
+			return;
+		}
+
+		const cards = await fetchCardsBySet(pack.setId);
+
+		setCardCache((prev) => ({
+			...prev,
+			[packId]: cards,
+		}));
+	};
+
 	useEffect(() => {
+		let active = true;
+
 		async function init() {
 			try {
 				const savedPackId = await loadLastPulledPack();
@@ -71,30 +89,80 @@ export default function Pack() {
 
 				setLastPackId(savedPack?.id ?? null);
 				setSelectedPack(defaultPack);
+				setSelectedIndex(0);
 
-				const results = await Promise.all(
-					packs.map(async (pack) => {
-						const cards = await fetchCardsBySet(pack.setId, pack.isShinyPack);
-						return [pack.id, cards] as const;
-					}),
-				);
-
-				const nextCache: CardCache = {};
-
-				results.forEach(([packId, cards]) => {
-					nextCache[packId] = cards;
-				});
-
-				setCardCache(nextCache);
+				if (active) {
+					await loadPackCards(defaultPack.id);
+				}
 			} catch {
-				Alert.alert("Error", "Failed to load Pokémon packs.");
+				if (active) {
+					Alert.alert("Error", "Failed to load Pokémon packs.");
+				}
 			} finally {
-				setLoadingPacks(false);
+				if (active) {
+					setLoadingPacks(false);
+				}
 			}
 		}
 
-		init();
+		void init();
+
+		return () => {
+			active = false;
+		};
 	}, []);
+
+	useEffect(() => {
+		if (!selectedPack) {
+			return;
+		}
+
+		if (cardCache[selectedPack.id]) {
+			setLoadingPacks(false);
+			return;
+		}
+
+		let active = true;
+		setLoadingPacks(true);
+
+		void loadPackCards(selectedPack.id)
+			.then(() => {
+				if (active) {
+					setLoadingPacks(false);
+				}
+			})
+			.catch(() => {
+				if (active) {
+					setLoadingPacks(false);
+				}
+			});
+
+		return () => {
+			active = false;
+		};
+	}, [selectedPack, cardCache]);
+
+	useEffect(() => {
+		if (loadingPacks) {
+			return;
+		}
+
+		const missingPacks = packs.filter((pack) => !cardCache[pack.id]);
+
+		if (missingPacks.length === 0) {
+			return;
+		}
+
+		void Promise.all(
+			missingPacks.map(async (pack) => {
+				try {
+					await loadPackCards(pack.id);
+				} catch {
+					// Ignore background prefetch failures.
+				}
+			}),
+		);
+	}, [loadingPacks, cardCache]);
 
 	useEffect(() => {
 		if (!selectedPack && displayPacks.length > 0) {
@@ -131,6 +199,29 @@ export default function Pack() {
 	const handleNextPack = () => {
 		handleSelectPackByIndex(selectedIndex + 1);
 	};
+
+	const packPanResponder = useRef(
+		PanResponder.create({
+			onMoveShouldSetPanResponder: (_, gesture) => {
+				return (
+					Math.abs(gesture.dx) > Math.abs(gesture.dy) &&
+					Math.abs(gesture.dx) > 12
+				);
+			},
+			onPanResponderRelease: (_, gesture) => {
+				if (Math.abs(gesture.dx) < 70) {
+					return;
+				}
+
+				if (gesture.dx < 0) {
+					handleNextPack();
+					return;
+				}
+
+				handlePreviousPack();
+			},
+		}),
+	).current;
 
 	const calculateAncestorReward = (cards: CardType[]) => {
 		return cards.reduce((total, card) => {
@@ -188,11 +279,7 @@ export default function Pack() {
 		setPulledCards([]);
 		setIsGodPack(false);
 
-		const result = openPack(
-			cards,
-			godPackChance,
-			selectedPack?.isShinyPack ?? false,
-		);
+		const result = openPack(cards, godPackChance);
 		const rewardAncestors = calculateAncestorReward(result.cards);
 
 		setPulledCards(result.cards);
@@ -215,6 +302,9 @@ export default function Pack() {
 	const handleRevealFinish = () => {
 		setShowReveal(false);
 		setShowResult(true);
+		setTimeout(() => {
+			scrollRef.current?.scrollToEnd({ animated: true });
+		}, 150);
 	};
 
 	const ancestorText = String(ancestors);
@@ -232,7 +322,11 @@ export default function Pack() {
 	}
 
 	return (
-		<ScrollView ref={scrollRef} contentContainerStyle={styles.container}>
+		<ScrollView
+			ref={scrollRef}
+			contentContainerStyle={styles.container}
+			scrollEnabled={!showReveal}
+		>
 			<Text style={styles.title}>Pull Pokémon Pack</Text>
 
 			<View style={styles.statusBox}>
@@ -259,7 +353,10 @@ export default function Pack() {
 							<Text style={styles.navButtonText}>‹</Text>
 						</Pressable>
 
-						<View style={styles.currentPackCard}>
+						<View
+							style={styles.currentPackCard}
+							{...packPanResponder.panHandlers}
+						>
 							<Image
 								source={selectedPack.image}
 								style={styles.bigPackImage}
@@ -267,9 +364,6 @@ export default function Pack() {
 							/>
 
 							<Text style={styles.packName}>{selectedPack.name}</Text>
-							{selectedPack.isShinyPack && (
-								<Text style={styles.shinyTag}>Shiny Pack</Text>
-							)}
 							<Text style={styles.packCounter}>
 								Pack {selectedIndex + 1} of {displayPacks.length}
 							</Text>
@@ -478,17 +572,6 @@ const styles = StyleSheet.create({
 		fontSize: 18,
 		fontFamily: FONT.bold,
 		textAlign: "center",
-	},
-	shinyTag: {
-		marginTop: 6,
-		alignSelf: "center",
-		paddingHorizontal: 10,
-		paddingVertical: 4,
-		borderRadius: 999,
-		backgroundColor: "#ffd24d",
-		color: "#663f00",
-		fontSize: 12,
-		fontFamily: FONT.semiBold,
 	},
 	packCounter: {
 		marginTop: 6,

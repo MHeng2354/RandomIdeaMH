@@ -78,32 +78,47 @@ function mapShinyRarity(card: PokemonApiCard): ShinyRarity {
 	return "normalShiny";
 }
 
-export async function fetchCardsBySet(
-	setId: string,
-	isShinyPack: boolean = false,
-): Promise<CardType[]> {
-	const query = encodeURIComponent(`set.id:${setId}`);
+const fetchCache = new Map<string, Promise<CardType[]>>();
 
-	const response = await fetch(`${API_URL}?q=${query}&pageSize=500`);
+export async function fetchCardsBySet(setId: string): Promise<CardType[]> {
+	const cached = fetchCache.get(setId);
 
-	if (!response.ok) {
-		throw new Error("Failed to fetch Pokémon TCG cards");
+	if (cached) {
+		return cached;
 	}
 
-	const json = await response.json();
+	const request = (async () => {
+		const query = encodeURIComponent(`set.id:${setId}`);
 
-	return json.data.map((card: PokemonApiCard) => {
-		const canBeShiny = isShinyPack || isShinyCard(card, setId);
+		const response = await fetch(`${API_URL}?q=${query}&pageSize=500`);
 
-		return {
-			id: card.id,
-			name: card.name,
-			image: card.images.large || card.images.small,
-			rarity: mapRarity(card.rarity),
-			isShiny: false,
-			shinyType: undefined,
-			canBeShiny,
-			shinyRarity: canBeShiny ? mapShinyRarity(card) : undefined,
-		};
+		if (!response.ok) {
+			throw new Error("Failed to fetch Pokémon TCG cards");
+		}
+
+		const json = await response.json();
+
+		return json.data.map((card: PokemonApiCard) => {
+			const canBeShiny = isShinyCard(card, setId);
+
+			return {
+				id: card.id,
+				name: card.name,
+				image: card.images.large || card.images.small,
+				rarity: mapRarity(card.rarity),
+				isShiny: false,
+				shinyType: undefined,
+				canBeShiny,
+				shinyRarity: canBeShiny ? mapShinyRarity(card) : undefined,
+			};
+		});
+	})();
+
+	fetchCache.set(setId, request);
+
+	request.catch(() => {
+		fetchCache.delete(setId);
 	});
+
+	return request;
 }

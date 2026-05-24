@@ -4,7 +4,7 @@ import {
 	Poppins_700Bold,
 	useFonts,
 } from "@expo-google-fonts/poppins";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	Animated,
 	Dimensions,
@@ -24,7 +24,7 @@ type Props = {
 };
 
 const { width } = Dimensions.get("window");
-const SWIPE_DISTANCE = 90;
+const SWIPE_DISTANCE = 20;
 
 export default function CardRevealSwiper({
 	cards,
@@ -38,74 +38,59 @@ export default function CardRevealSwiper({
 	});
 
 	const [index, setIndex] = useState(0);
-	const translateX = useRef(new Animated.Value(0)).current;
-	const scale = useRef(new Animated.Value(0.9)).current;
-	const opacity = useRef(new Animated.Value(0)).current;
+	const dragOffset = useRef(new Animated.Value(0)).current;
+	const goNextRef = useRef<() => void>(() => {});
 
 	const currentCard = cards[index];
 	const isLastCard = index === cards.length - 1;
+	const isLastCardRef = useRef(isLastCard);
 
 	useEffect(() => {
-		playEnterAnimation();
-	}, [index]);
+		dragOffset.setValue(0);
+	}, [index, dragOffset]);
 
-	const playEnterAnimation = () => {
-		translateX.setValue(0);
-		scale.setValue(0.9);
-		opacity.setValue(0);
+	useEffect(() => {
+		isLastCardRef.current = isLastCard;
+	}, [isLastCard]);
 
-		Animated.parallel([
-			Animated.spring(scale, {
-				toValue: 1,
-				friction: 6,
-				tension: 80,
-				useNativeDriver: true,
-			}),
-			Animated.timing(opacity, {
-				toValue: 1,
-				duration: 220,
-				useNativeDriver: true,
-			}),
-		]).start();
-	};
-
-	const goNext = () => {
-		if (isLastCard) {
+	const goNext = useCallback(() => {
+		if (isLastCardRef.current) {
 			onFinish();
 			return;
 		}
 
-		Animated.parallel([
-			Animated.timing(translateX, {
-				toValue: -width,
-				duration: 180,
-				useNativeDriver: true,
-			}),
-			Animated.timing(opacity, {
-				toValue: 0,
-				duration: 160,
-				useNativeDriver: true,
-			}),
-		]).start(() => {
+		dragOffset.stopAnimation();
+
+		Animated.timing(dragOffset, {
+			toValue: -width,
+			duration: 180,
+			useNativeDriver: true,
+		}).start(() => {
+			dragOffset.setValue(0);
 			setIndex((prev) => prev + 1);
 		});
-	};
+	}, [dragOffset, onFinish]);
+
+	useEffect(() => {
+		goNextRef.current = goNext;
+	}, [goNext]);
 
 	const panResponder = useRef(
 		PanResponder.create({
-			onMoveShouldSetPanResponder: (_, gesture) => {
-				return Math.abs(gesture.dx) > 10;
-			},
+			onStartShouldSetPanResponder: () => true,
+			onMoveShouldSetPanResponder: () => true,
+			onMoveShouldSetPanResponderCapture: () => true,
+			onShouldBlockNativeResponder: () => false,
 			onPanResponderMove: (_, gesture) => {
-				translateX.setValue(gesture.dx);
+				dragOffset.setValue(gesture.dx);
 			},
 			onPanResponderRelease: (_, gesture) => {
-				if (Math.abs(gesture.dx) > SWIPE_DISTANCE) {
-					goNext();
+				if (Math.abs(gesture.dx) > SWIPE_DISTANCE || isLastCardRef.current) {
+					goNextRef.current();
 					return;
 				}
 
-				Animated.spring(translateX, {
+				Animated.spring(dragOffset, {
 					toValue: 0,
 					friction: 6,
 					tension: 80,
@@ -115,7 +100,7 @@ export default function CardRevealSwiper({
 		}),
 	).current;
 
-	const rotate = translateX.interpolate({
+	const rotate = dragOffset.interpolate({
 		inputRange: [-width, 0, width],
 		outputRange: ["-12deg", "0deg", "12deg"],
 	});
@@ -139,8 +124,7 @@ export default function CardRevealSwiper({
 				style={[
 					styles.cardWrapper,
 					{
-						opacity,
-						transform: [{ translateX }, { rotate }, { scale }],
+						transform: [{ translateX: dragOffset }, { rotate }],
 					},
 				]}
 			>
@@ -165,7 +149,7 @@ export default function CardRevealSwiper({
 				{isLastCard ? "Swipe or tap Finish" : "Swipe card to reveal next"}
 			</Text>
 
-			<Pressable style={styles.nextButton} onPress={goNext}>
+			<Pressable style={styles.nextButton} onPress={goNextRef.current}>
 				<Text style={styles.nextButtonText}>
 					{isLastCard ? "Finish" : "Reveal Next"}
 				</Text>

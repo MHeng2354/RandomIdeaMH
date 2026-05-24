@@ -28,5 +28,4 @@ export type PackType = {
 	setId: string;
 	price: number;
 	image: ImageSourcePropType;
-	isShinyPack?: boolean;
 };

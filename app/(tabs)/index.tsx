@@ -52,10 +52,10 @@ export default function HomeScreen() {
 						<View style={styles.heroTextBox}>
 							<Text style={styles.heroTitle}>Welcome back!</Text>
 							<Text style={styles.heroSubtitle}>
-								Your collection is shining brighter than ever.
+								Your collection is growing with every pull.
 							</Text>
 							<Text style={styles.heroDescription}>
-								Open packs, unlock shinies, and build the ultimate team.
+								Open packs, chase rares, and build the ultimate team.
 							</Text>
 						</View>
 
@@ -66,7 +66,7 @@ export default function HomeScreen() {
 
 					<View style={styles.featureBadge}>
 						<Text style={styles.featureText}>
-							Featured: Shiny pulls are on the rise
+							Featured: Rare pulls are on the rise
 						</Text>
 					</View>
 
@@ -133,13 +133,12 @@ export default function HomeScreen() {
 				<View style={styles.missionCard}>
 					<Text style={styles.missionTitle}>Today’s mission</Text>
 					<Text style={styles.missionText}>
-						Open a shiny pack, grow your collection, and see if luck is on your
-						side.
+						Open packs, grow your collection, and see if luck is on your side.
 					</Text>
 
 					<View style={styles.missionTagRow}>
 						<View style={styles.missionTag}>
-							<Text style={styles.missionTagText}>+0.2% shiny boost</Text>
+							<Text style={styles.missionTagText}>Fresh pulls every day</Text>
 						</View>
 
 						<View style={styles.missionTag}>

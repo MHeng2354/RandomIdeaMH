@@ -47,7 +47,7 @@ export default function WonderMiss() {
 	const loadCards = async () => {
 		try {
 			const results = await Promise.all(
-				packs.map((pack) => fetchCardsBySet(pack.setId, pack.isShinyPack)),
+				packs.map((pack) => fetchCardsBySet(pack.setId)),
 			);
 
 			const mergedCards = results.flat();
