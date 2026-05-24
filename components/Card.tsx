@@ -22,7 +22,8 @@ function formatRarity(rarity: CardType["rarity"]) {
 		illustrationRare: "Illustration Rare",
 		specialIllustrationRare: "Special Illustration Rare",
 		hyperRare: "Hyper Rare",
-};
+	};
+
 	return labels[rarity] || "Common";
 }
 
@@ -30,7 +31,12 @@ export default function Card({ card }: { card: CardType }) {
 	return (
 		<View style={styles.card}>
 			<View style={styles.imageWrapper}>
-				<Image source={{ uri: card.image }} style={styles.image} />
+				<Image
+					source={{ uri: card.image }}
+					style={styles.image}
+					resizeMode="cover"
+				/>
+				<View style={styles.imageGlow} />
 				{card.isShiny && (
 					<View style={styles.shinyBadge}>
 						<Text style={styles.shinyText}>
@@ -40,52 +46,74 @@ export default function Card({ card }: { card: CardType }) {
 				)}
 			</View>
 			<Text style={styles.name}>{card.name}</Text>
-			<Text style={styles.rarity}>{card.rarity}</Text>
+			<Text style={styles.rarity}>{formatRarity(card.rarity)}</Text>
 		</View>
 	);
 }
 
 const styles = StyleSheet.create({
 	card: {
+		width: 150,
 		alignItems: "center",
 		margin: 10,
+		paddingTop: 12,
+		paddingBottom: 14,
+		paddingHorizontal: 10,
+		borderRadius: 24,
+		backgroundColor: "#ffffff",
+		shadowColor: "#0f172a",
+		shadowOpacity: 0.12,
+		shadowRadius: 14,
+		shadowOffset: { width: 0, height: 10 },
+		elevation: 8,
 	},
 	imageWrapper: {
 		position: "relative",
+		borderRadius: 20,
+		overflow: "hidden",
+		backgroundColor: "#eef3ff",
+		padding: 4,
 	},
 	image: {
-		width: 120,
-		height: 170,
-		borderRadius: 10,
+		width: 122,
+		height: 172,
+		borderRadius: 16,
 	},
-	shinyCard: {
-		backgroundColor: "#fff8d6",
-		borderColor: "#ffcc00",
+	imageGlow: {
+		position: "absolute",
+		top: 8,
+		left: 8,
+		right: 8,
+		height: 64,
+		borderRadius: 16,
+		backgroundColor: "rgba(59,130,246,0.12)",
 	},
 	shinyBadge: {
-		alignSelf: "flex-start",
-		backgroundColor: "#b8860b",
-		color: "#fff",
-		paddingHorizontal: 7,
-		paddingVertical: 3,
+		position: "absolute",
+		left: 10,
+		top: 10,
+		paddingHorizontal: 8,
+		paddingVertical: 4,
 		borderRadius: 999,
-		fontSize: 10,
-		fontWeight: "bold",
-		marginBottom: 5,
+		backgroundColor: "rgba(184, 134, 11, 0.95)",
 	},
 	shinyText: {
-		color: "#663f00",
-		fontSize: 10,
-		fontWeight: "700",
+		color: "#fffdf3",
+		fontSize: 9,
+		fontWeight: "800",
+		letterSpacing: 0.3,
 	},
 	name: {
-		marginTop: 8,
+		marginTop: 12,
 		fontSize: 14,
-		fontWeight: "600",
+		fontWeight: "700",
 		textAlign: "center",
+		color: "#111827",
 	},
 	rarity: {
+		marginTop: 4,
 		fontSize: 12,
-		color: "#555",
+		fontWeight: "600",
+		color: "#4b5563",
 	},
 });

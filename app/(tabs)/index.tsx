@@ -15,6 +15,7 @@ import {
 	ScrollView,
 	StyleSheet,
 	Text,
+	useWindowDimensions,
 	View,
 } from "react-native";
 import { GameContext } from "../../context/GameContext";
@@ -29,11 +30,13 @@ export default function HomeScreen() {
 		Poppins_600SemiBold,
 		Poppins_700Bold,
 	});
+	const { width } = useWindowDimensions();
+	const isCompact = width < 380;
 
 	if (!fontsLoaded) {
 		return (
 			<SafeAreaView style={styles.loadingContainer}>
-				<ActivityIndicator size="large" color="#ff4b2b" />
+				<ActivityIndicator size="large" color="#2563eb" />
 			</SafeAreaView>
 		);
 	}
@@ -44,38 +47,62 @@ export default function HomeScreen() {
 				showsVerticalScrollIndicator={false}
 				contentContainerStyle={styles.container}
 			>
-				<Text style={styles.pageTitle}>Pokemon TCG Budget</Text>
-				<View style={styles.heroCard}>
-					<View style={styles.heroDecoration} />
-
-					<View style={styles.heroTop}>
-						<View style={styles.heroTextBox}>
-							<Text style={styles.heroTitle}>Welcome back!</Text>
-							<Text style={styles.heroSubtitle}>
-								Your collection is growing with every pull.
-							</Text>
-							<Text style={styles.heroDescription}>
-								Open packs, chase rares, and build the ultimate team.
-							</Text>
-						</View>
-
-						<View style={styles.sparkleBadge}>
-							<Ionicons name="sparkles" size={30} color="#ffd84d" />
-						</View>
-					</View>
-
-					<View style={styles.featureBadge}>
-						<Text style={styles.featureText}>
-							Featured: Rare pulls are on the rise
+				<View
+					style={[
+						styles.headerRow,
+						isCompact && { flexDirection: "column", alignItems: "flex-start" },
+					]}
+				>
+					<View>
+						<Text style={[styles.pageTitle, isCompact && { fontSize: 26 }]}>
+							Pokémon TCG Budget
+						</Text>
+						<Text
+							style={[styles.pageSubtitle, isCompact && { maxWidth: "100%" }]}
+						>
+							Build your collection with sleek pulls and smart browsing.
 						</Text>
 					</View>
+					<View style={[styles.headerBadge, isCompact && { marginTop: 12 }]}>
+						<Ionicons name="sparkles" size={24} color="#f59e0b" />
+					</View>
+				</View>
 
-					<View style={styles.statsRow}>
+				<View style={styles.heroCard}>
+					<View style={styles.heroGlow} />
+					<View
+						style={[
+							styles.heroTop,
+							isCompact && { flexDirection: "column", alignItems: "stretch" },
+						]}
+					>
+						<View
+							style={[
+								styles.heroTextBox,
+								isCompact && { paddingRight: 0, paddingBottom: 12 },
+							]}
+						>
+							<Text style={styles.heroEyebrow}>New season</Text>
+							<Text style={[styles.heroTitle, isCompact && { fontSize: 22 }]}>
+								Welcome back, collector.
+							</Text>
+							<Text style={styles.heroDescription}>
+								Open packs, reveal rare cards, and keep your Pokédex fresh in
+								one modern flow.
+							</Text>
+						</View>
+						<View style={styles.heroIconCard}>
+							<Ionicons name="planet" size={28} color="#ffffff" />
+						</View>
+					</View>
+
+					<View
+						style={[styles.statsRow, isCompact && { flexDirection: "column" }]}
+					>
 						<View style={styles.statCard}>
 							<Text style={styles.statLabel}>Ancestors</Text>
 							<Text style={styles.statValue}>{ancestors}</Text>
 						</View>
-
 						<View style={styles.statCard}>
 							<Text style={styles.statLabel}>Collection</Text>
 							<Text style={styles.statValue}>{collection.length}</Text>
@@ -83,43 +110,53 @@ export default function HomeScreen() {
 					</View>
 				</View>
 
-				<View style={styles.featureRow}>
+				<View
+					style={[styles.featureRow, isCompact && { flexDirection: "column" }]}
+				>
 					<Pressable
-						style={[styles.featureCard, styles.packCard]}
+						style={[
+							styles.featureCard,
+							styles.packCard,
+							isCompact && { minHeight: 150 },
+						]}
 						onPress={() => router.push("/(tabs)/pack")}
 					>
-						<Ionicons name="file-tray-full" size={25} color="#fff" />
-						<Text style={styles.featureCardTitle}>Packs</Text>
+						<Ionicons name="albums-outline" size={24} color="#ffffff" />
+						<Text style={styles.featureCardTitle}>Open packs</Text>
 						<Text style={styles.featureCardText}>
-							Open bundles, chase rares, and collect your favorites.
+							Swipe through packs, reveal cards, and track your pull rewards.
 						</Text>
 					</Pressable>
 
 					<Pressable
-						style={[styles.featureCard, styles.wonderCard]}
+						style={[
+							styles.featureCard,
+							styles.wonderCard,
+							isCompact && { minHeight: 150 },
+						]}
 						onPress={() => router.push("/(tabs)/wondermiss")}
 					>
-						<Ionicons name="flash" size={26} color="#fff" />
+						<Ionicons name="sparkles-outline" size={24} color="#ffffff" />
 						<Text style={styles.featureCardTitle}>WonderMiss</Text>
 						<Text style={styles.featureCardText}>
-							Take a chance on high-volatility pulls with big rewards.
+							Play a high-energy selection flow with fast card reveals.
 						</Text>
 					</Pressable>
 				</View>
 
-				<View style={styles.actionRow}>
+				<View style={styles.actionGrid}>
 					<Pressable
 						style={styles.actionButton}
 						onPress={() => router.push("/(tabs)/pack")}
 					>
-						<Text style={styles.actionButtonText}>Browse Packs</Text>
+						<Text style={styles.actionButtonText}>Browse packs</Text>
 					</Pressable>
 
 					<Pressable
 						style={styles.actionButton}
 						onPress={() => router.push("/(tabs)/collection")}
 					>
-						<Text style={styles.actionButtonText}>View Collection</Text>
+						<Text style={styles.actionButtonText}>Open Pokédex</Text>
 					</Pressable>
 
 					<Pressable
@@ -131,18 +168,17 @@ export default function HomeScreen() {
 				</View>
 
 				<View style={styles.missionCard}>
-					<Text style={styles.missionTitle}>Today’s mission</Text>
+					<Text style={styles.missionTitle}>Today's mission</Text>
 					<Text style={styles.missionText}>
-						Open packs, grow your collection, and see if luck is on your side.
+						Refresh your collection, chase a shiny pull, and keep your run
+						going.
 					</Text>
-
 					<View style={styles.missionTagRow}>
 						<View style={styles.missionTag}>
-							<Text style={styles.missionTagText}>Fresh pulls every day</Text>
+							<Text style={styles.missionTagText}>Fresh pulls</Text>
 						</View>
-
 						<View style={styles.missionTag}>
-							<Text style={styles.missionTagText}>Top pulls highlighted</Text>
+							<Text style={styles.missionTagText}>Rare highlights</Text>
 						</View>
 					</View>
 				</View>
@@ -161,105 +197,129 @@ const FONT = {
 const styles = StyleSheet.create({
 	safeArea: {
 		flex: 1,
-		backgroundColor: "#eef4ff",
+		backgroundColor: "#f3f6fb",
 	},
 	loadingContainer: {
 		flex: 1,
-		backgroundColor: "#eef4ff",
+		backgroundColor: "#f3f6fb",
 		alignItems: "center",
 		justifyContent: "center",
 	},
 	container: {
 		paddingHorizontal: 20,
-		paddingTop: 45,
-		paddingBottom: 26,
+		paddingTop: 28,
+		paddingBottom: 32,
+	},
+	headerRow: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+		marginBottom: 18,
+	},
+	headerBadge: {
+		width: 46,
+		height: 46,
+		borderRadius: 20,
+		backgroundColor: "#ffffff",
+		alignItems: "center",
+		justifyContent: "center",
+		shadowColor: "#0f172a",
+		shadowOpacity: 0.08,
+		shadowRadius: 14,
+		shadowOffset: { width: 0, height: 10 },
+		elevation: 4,
+	},
+	pageTitle: {
+		fontSize: 30,
+		color: "#0f172a",
+		fontFamily: FONT.bold,
+	},
+	pageSubtitle: {
+		marginTop: 6,
+		fontSize: 14,
+		color: "#475569",
+		fontFamily: FONT.regular,
+		maxWidth: 300,
 	},
 	heroCard: {
-		width: "100%",
-		backgroundColor: "#12265a",
+		backgroundColor: "#0f172a",
 		borderRadius: 28,
-		padding: 26,
+		padding: 22,
 		overflow: "hidden",
+		shadowColor: "#0f172a",
+		shadowOpacity: 0.15,
+		shadowRadius: 18,
+		shadowOffset: { width: 0, height: 12 },
+		elevation: 8,
 	},
-	heroDecoration: {
+	heroGlow: {
 		position: "absolute",
-		width: 132,
-		height: 132,
-		borderRadius: 66,
-		backgroundColor: "rgba(255, 255, 255, 0.12)",
-		top: -8,
-		right: -10,
+		top: -18,
+		right: -18,
+		width: 120,
+		height: 120,
+		borderRadius: 60,
+		backgroundColor: "rgba(59,130,246,0.24)",
 	},
 	heroTop: {
 		flexDirection: "row",
 		justifyContent: "space-between",
+		alignItems: "center",
 	},
 	heroTextBox: {
 		flex: 1,
 		paddingRight: 12,
 	},
-	heroTitle: {
-		fontSize: 28,
-		lineHeight: 36,
-		color: "#fff",
-		fontFamily: FONT.bold,
+	heroEyebrow: {
+		fontSize: 12,
+		color: "#93c5fd",
+		fontFamily: FONT.semiBold,
+		letterSpacing: 0.7,
+		textTransform: "uppercase",
 	},
-	heroSubtitle: {
-		marginTop: 10,
-		fontSize: 14,
-		lineHeight: 22,
-		color: "#d9e3ff",
-		fontFamily: FONT.regular,
+	heroTitle: {
+		fontSize: 26,
+		lineHeight: 34,
+		color: "#ffffff",
+		fontFamily: FONT.bold,
+		marginTop: 8,
 	},
 	heroDescription: {
-		marginTop: 18,
-		fontSize: 15,
-		lineHeight: 24,
-		color: "#aebdec",
+		marginTop: 12,
+		fontSize: 14,
+		lineHeight: 22,
+		color: "#dbeafe",
 		fontFamily: FONT.regular,
 	},
-	sparkleBadge: {
-		width: 72,
-		height: 72,
-		borderRadius: 26,
-		backgroundColor: "rgba(255, 255, 255, 0.11)",
+	heroIconCard: {
+		width: 60,
+		height: 60,
+		borderRadius: 24,
+		backgroundColor: "rgba(255,255,255,0.1)",
 		alignItems: "center",
 		justifyContent: "center",
 	},
-	featureBadge: {
-		marginTop: 24,
-		alignSelf: "flex-start",
-		backgroundColor: "rgba(255, 255, 255, 0.13)",
-		paddingHorizontal: 14,
-		paddingVertical: 9,
-		borderRadius: 16,
-	},
-	featureText: {
-		color: "#fff",
-		fontSize: 12,
-		fontFamily: FONT.bold,
-	},
 	statsRow: {
 		flexDirection: "row",
-		gap: 14,
-		marginTop: 24,
+		gap: 12,
+		marginTop: 22,
 	},
 	statCard: {
 		flex: 1,
-		backgroundColor: "#354577",
-		borderRadius: 18,
+		backgroundColor: "rgba(255,255,255,0.08)",
+		borderRadius: 20,
+		paddingVertical: 16,
 		paddingHorizontal: 18,
-		paddingVertical: 20,
 	},
 	statLabel: {
-		fontSize: 13,
-		color: "#aebdec",
+		fontSize: 12,
+		color: "#cbd5e1",
 		fontFamily: FONT.regular,
 	},
 	statValue: {
-		marginTop: 10,
-		fontSize: 31,
-		color: "#fff",
+		marginTop: 8,
+		fontSize: 28,
+		color: "#ffffff",
 		fontFamily: FONT.bold,
 	},
 	featureRow: {
@@ -269,89 +329,94 @@ const styles = StyleSheet.create({
 	},
 	featureCard: {
 		flex: 1,
-		minHeight: 158,
-		borderRadius: 20,
+		minHeight: 170,
+		borderRadius: 24,
 		padding: 18,
 		justifyContent: "space-between",
+		shadowColor: "#0f172a",
+		shadowOpacity: 0.1,
+		shadowRadius: 16,
+		shadowOffset: { width: 0, height: 10 },
+		elevation: 7,
 	},
 	packCard: {
-		backgroundColor: "#ff815c",
+		backgroundColor: "#2563eb",
 	},
 	wonderCard: {
-		backgroundColor: "#4e84f5",
+		backgroundColor: "#0f766e",
 	},
 	featureCardTitle: {
-		marginTop: 12,
+		marginTop: 14,
 		fontSize: 18,
-		color: "#fff",
+		color: "#ffffff",
 		fontFamily: FONT.bold,
 	},
 	featureCardText: {
 		marginTop: 8,
 		fontSize: 14,
 		lineHeight: 22,
-		color: "#fff",
+		color: "rgba(255,255,255,0.92)",
 		fontFamily: FONT.regular,
 	},
-	actionRow: {
-		flexDirection: "row",
-		gap: 10,
+	actionGrid: {
 		marginTop: 18,
+		gap: 12,
 	},
 	actionButton: {
-		flex: 1,
-		backgroundColor: "#ff4b2b",
-		borderRadius: 15,
+		backgroundColor: "#ffffff",
+		borderRadius: 18,
 		paddingVertical: 14,
-		alignItems: "center",
-		justifyContent: "center",
+		paddingHorizontal: 18,
+		shadowColor: "#0f172a",
+		shadowOpacity: 0.08,
+		shadowRadius: 14,
+		shadowOffset: { width: 0, height: 8 },
+		elevation: 4,
 	},
 	actionButtonText: {
-		color: "#fff",
-		fontSize: 13,
-		textAlign: "center",
-		fontFamily: FONT.bold,
-	},
-	pageTitle: {
-		fontSize: 40,
-		color: "#12265a",
-		fontFamily: FONT.bold,
-		marginBottom: 18,
+		fontSize: 15,
+		color: "#0f172a",
+		fontFamily: FONT.semiBold,
 		textAlign: "center",
 	},
 	missionCard: {
 		marginTop: 20,
-		backgroundColor: "#fff",
+		backgroundColor: "#ffffff",
 		borderRadius: 24,
-		padding: 22,
+		padding: 20,
+		shadowColor: "#0f172a",
+		shadowOpacity: 0.08,
+		shadowRadius: 16,
+		shadowOffset: { width: 0, height: 10 },
+		elevation: 5,
 	},
 	missionTitle: {
-		fontSize: 19,
-		color: "#12265a",
+		fontSize: 18,
 		fontFamily: FONT.bold,
+		color: "#0f172a",
 	},
 	missionText: {
-		marginTop: 12,
+		marginTop: 10,
 		fontSize: 14,
-		lineHeight: 23,
-		color: "#65708d",
+		lineHeight: 22,
+		color: "#475569",
 		fontFamily: FONT.regular,
 	},
 	missionTagRow: {
 		flexDirection: "row",
 		gap: 10,
-		marginTop: 18,
+		marginTop: 14,
+		flexWrap: "wrap",
 	},
 	missionTag: {
-		flex: 1,
-		backgroundColor: "#f4f7ff",
-		borderRadius: 14,
-		paddingVertical: 12,
-		alignItems: "center",
+		paddingHorizontal: 12,
+		paddingVertical: 8,
+		borderRadius: 999,
+		backgroundColor: "#e0f2fe",
 	},
 	missionTagText: {
-		fontSize: 11,
-		color: "#4260a8",
-		fontFamily: FONT.bold,
+		fontSize: 12,
+		color: "#0f172a",
+		fontFamily: FONT.semiBold,
 	},
 });

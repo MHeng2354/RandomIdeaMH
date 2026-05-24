@@ -1,8 +1,17 @@
+import {
+	Poppins_400Regular,
+	Poppins_500Medium,
+	Poppins_600SemiBold,
+	Poppins_700Bold,
+	useFonts,
+} from "@expo-google-fonts/poppins";
 import { useContext, useMemo, useState } from "react";
 import {
 	FlatList,
 	Image,
 	Modal,
+	Pressable,
+	SafeAreaView,
 	StyleSheet,
 	Text,
 	TouchableOpacity,
@@ -37,9 +46,8 @@ export default function Collection() {
 
 	const groupedAndSortedCards = useMemo(() => {
 		const grouped: Record<string, CardWithCount[]> = {};
-
-		// Count duplicates by id
 		const cardCounts: Record<string, { card: CardType; count: number }> = {};
+
 		collection.forEach((card) => {
 			if (cardCounts[card.id]) {
 				cardCounts[card.id].count++;
@@ -48,7 +56,6 @@ export default function Collection() {
 			}
 		});
 
-		// Group by rarity
 		Object.values(cardCounts).forEach(({ card, count }) => {
 			const cardWithCount: CardWithCount = { ...card, count };
 			if (!grouped[card.rarity]) {
@@ -57,14 +64,12 @@ export default function Collection() {
 			grouped[card.rarity].push(cardWithCount);
 		});
 
-		// Sort within each group by name
 		Object.keys(grouped).forEach((rarity) => {
 			grouped[rarity].sort((a, b) => a.name.localeCompare(b.name));
 		});
 
 		const filteredRarities =
 			selectedRarity === "all" ? RARITY_ORDER : [selectedRarity];
-
 		const sections = filteredRarities.map((rarity) => {
 			const cards = grouped[rarity] ?? [];
 			const totalCards = cards.reduce((sum, card) => sum + card.count, 0);
@@ -87,22 +92,24 @@ export default function Collection() {
 	};
 
 	const renderCard = ({ item }: { item: CardWithCount }) => (
-		<TouchableOpacity style={styles.card} onPress={() => handleCardPress(item)}>
+		<Pressable style={styles.card} onPress={() => handleCardPress(item)}>
 			<Image
 				source={{ uri: item.image }}
 				style={styles.image}
 				resizeMode="cover"
 			/>
-			<Text style={styles.name} numberOfLines={2}>
-				{item.name}
-			</Text>
-			<Text style={styles.rarity}>{item.rarity}</Text>
+			<View style={styles.cardInfo}>
+				<Text style={styles.name} numberOfLines={2}>
+					{item.name}
+				</Text>
+				<Text style={styles.rarity}>{formatRarityLabel(item.rarity)}</Text>
+			</View>
 			{item.count > 1 && (
 				<View style={styles.countBadge}>
-					<Text style={styles.countText}>×{item.count}</Text>
+					<Text style={styles.countText}>x{item.count}</Text>
 				</View>
 			)}
-		</TouchableOpacity>
+		</Pressable>
 	);
 
 	const toggleRarityCollapse = (rarity: CardType["rarity"]) => {
@@ -137,17 +144,22 @@ export default function Collection() {
 		};
 	}) => {
 		const isCollapsed = collapsedRarities[item.rarity] ?? false;
+
 		return (
-			<View key={item.title} style={styles.section}>
-				<TouchableOpacity
+			<View style={styles.section}>
+				<Pressable
 					style={styles.sectionHeader}
 					onPress={() => toggleRarityCollapse(item.rarity)}
 				>
-					<Text style={styles.sectionTitle}>
-						{item.title} ({item.data.length} unique, {item.totalCards} total)
-					</Text>
-					<Text style={styles.sectionToggle}>{isCollapsed ? "+" : "–"}</Text>
-				</TouchableOpacity>
+					<View>
+						<Text style={styles.sectionTitle}>{item.title}</Text>
+						<Text style={styles.sectionMeta}>
+							{item.data.length} unique / {item.totalCards} total
+						</Text>
+					</View>
+					<Text style={styles.sectionToggle}>{isCollapsed ? "+" : "-"}</Text>
+				</Pressable>
+
 				{!isCollapsed ? (
 					<FlatList
 						data={item.data}
@@ -157,40 +169,59 @@ export default function Collection() {
 						columnWrapperStyle={styles.row}
 						scrollEnabled={false}
 						showsVerticalScrollIndicator={false}
-						contentContainerStyle={
-							item.data.length === 0 ? styles.emptySection : undefined
-						}
-						ListEmptyComponent={
-							<Text style={styles.empty}>No cards in this rarity.</Text>
-						}
+						contentContainerStyle={styles.sectionList}
 					/>
-				) : (
-					<Text style={styles.collapsedText}>
-						Tap to expand this rarity group.
-					</Text>
-				)}
+				) : null}
 			</View>
 		);
 	};
 
-	return (
-		<View style={styles.container}>
-			<Text style={styles.title}>Pokédex</Text>
+	const [fontsLoaded] = useFonts({
+		Poppins_400Regular,
+		Poppins_500Medium,
+		Poppins_600SemiBold,
+		Poppins_700Bold,
+	});
 
-			<View style={styles.sortContainer}>
-				<TouchableOpacity
-					style={[styles.sortButton, styles.filterButton]}
-					onPress={() => setRarityPickerVisible(true)}
-				>
-					<Text style={[styles.sortButtonText, styles.sortButtonTextActive]}>
-						Filter: {formatRarityLabel(selectedRarity)}
-					</Text>
-				</TouchableOpacity>
+	if (!fontsLoaded) {
+		return <SafeAreaView style={styles.loadingContainer} />;
+	}
+
+	return (
+		<SafeAreaView style={styles.safeArea}>
+			<View style={styles.container}>
+				<View style={styles.headerCard}>
+					<View>
+						<Text style={styles.title}>Pokédex</Text>
+						<Text style={styles.headerText}>
+							Browse your collection and filter by rarity in one place.
+						</Text>
+					</View>
+					<Pressable
+						style={styles.filterButton}
+						onPress={() => setRarityPickerVisible(true)}
+					>
+						<Text style={styles.filterButtonText}>
+							Filter: {formatRarityLabel(selectedRarity)}
+						</Text>
+					</Pressable>
+				</View>
+
+				<FlatList
+					data={groupedAndSortedCards}
+					keyExtractor={(item) => item.title}
+					renderItem={renderSection}
+					contentContainerStyle={styles.list}
+					showsVerticalScrollIndicator={false}
+					ListEmptyComponent={
+						<Text style={styles.empty}>No cards collected yet.</Text>
+					}
+				/>
 			</View>
 
 			<Modal
 				visible={rarityPickerVisible}
-				transparent={true}
+				transparent
 				animationType="fade"
 				onRequestClose={() => setRarityPickerVisible(false)}
 			>
@@ -201,7 +232,7 @@ export default function Collection() {
 				>
 					<View style={styles.filterModalContent}>
 						{filterOptions.map((rarity) => (
-							<TouchableOpacity
+							<Pressable
 								key={rarity}
 								style={[
 									styles.filterOption,
@@ -217,26 +248,15 @@ export default function Collection() {
 								>
 									{formatRarityLabel(rarity)}
 								</Text>
-							</TouchableOpacity>
+							</Pressable>
 						))}
 					</View>
 				</TouchableOpacity>
 			</Modal>
 
-			<FlatList
-				data={groupedAndSortedCards}
-				keyExtractor={(item) => item.title}
-				renderItem={renderSection}
-				contentContainerStyle={styles.list}
-				showsVerticalScrollIndicator={false}
-				ListEmptyComponent={
-					<Text style={styles.empty}>No cards collected yet.</Text>
-				}
-			/>
-
 			<Modal
 				visible={modalVisible}
-				transparent={true}
+				transparent
 				animationType="fade"
 				onRequestClose={() => setModalVisible(false)}
 			>
@@ -256,75 +276,106 @@ export default function Collection() {
 					</View>
 				</TouchableOpacity>
 			</Modal>
-		</View>
+		</SafeAreaView>
 	);
 }
 
+const FONT = {
+	regular: "Poppins_400Regular",
+	medium: "Poppins_500Medium",
+	semiBold: "Poppins_600SemiBold",
+	bold: "Poppins_700Bold",
+};
+
 const styles = StyleSheet.create({
+	safeArea: {
+		flex: 1,
+		backgroundColor: "#f3f6fb",
+	},
+	loadingContainer: {
+		flex: 1,
+		backgroundColor: "#f3f6fb",
+	},
 	container: {
 		flex: 1,
-		paddingTop: 45,
-		paddingHorizontal: 12,
-		backgroundColor: "#fff",
+		paddingTop: 24,
+		paddingHorizontal: 16,
+	},
+	headerCard: {
+		backgroundColor: "#ffffff",
+		borderRadius: 28,
+		padding: 20,
+		marginBottom: 16,
+		shadowColor: "#0f172a",
+		shadowOpacity: 0.08,
+		shadowRadius: 16,
+		shadowOffset: { width: 0, height: 10 },
+		elevation: 5,
 	},
 	title: {
 		fontSize: 30,
-		fontWeight: "bold",
-		textAlign: "center",
-		marginBottom: 16,
+		fontFamily: FONT.bold,
+		color: "#0f172a",
 	},
-	sortContainer: {
-		flexDirection: "row",
-		justifyContent: "center",
-		alignItems: "center",
-		marginBottom: 16,
-	},
-	sortButton: {
-		paddingHorizontal: 16,
-		paddingVertical: 8,
-		borderRadius: 20,
-		backgroundColor: "#2c9cff",
+	headerText: {
+		marginTop: 8,
+		fontSize: 14,
+		lineHeight: 22,
+		color: "#475569",
+		fontFamily: FONT.regular,
 	},
 	filterButton: {
-		minWidth: 180,
-		alignItems: "center",
+		marginTop: 16,
+		backgroundColor: "#2563eb",
+		borderRadius: 999,
+		paddingVertical: 12,
+		paddingHorizontal: 18,
+		alignSelf: "flex-start",
 	},
-	filterModalContent: {
-		width: "90%",
-		backgroundColor: "#fff",
-		borderRadius: 12,
-		padding: 16,
-	},
-	filterOption: {
-		paddingVertical: 14,
-		paddingHorizontal: 12,
-		borderRadius: 10,
-		marginBottom: 10,
-		backgroundColor: "#f5f5f5",
-	},
-	filterOptionActive: {
-		backgroundColor: "#0dade3",
-	},
-	filterOptionText: {
-		fontSize: 16,
-		color: "#333",
-	},
-	filterOptionTextActive: {
-		color: "#fff",
-		fontWeight: "bold",
-	},
-	sortButtonActive: {
-		backgroundColor: "#e3350d",
-	},
-	sortButtonText: {
+	filterButtonText: {
+		color: "#ffffff",
+		fontFamily: FONT.semiBold,
 		fontSize: 14,
-		color: "#666",
-	},
-	sortButtonTextActive: {
-		color: "#fff",
 	},
 	list: {
 		paddingBottom: 24,
+	},
+	section: {
+		marginBottom: 18,
+	},
+	sectionHeader: {
+		backgroundColor: "#ffffff",
+		borderRadius: 20,
+		paddingVertical: 14,
+		paddingHorizontal: 16,
+		marginBottom: 12,
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+		shadowColor: "#0f172a",
+		shadowOpacity: 0.06,
+		shadowRadius: 12,
+		shadowOffset: { width: 0, height: 8 },
+		elevation: 4,
+	},
+	sectionTitle: {
+		fontSize: 18,
+		fontFamily: FONT.bold,
+		color: "#0f172a",
+	},
+	sectionMeta: {
+		marginTop: 4,
+		fontSize: 12,
+		fontFamily: FONT.regular,
+		color: "#64748b",
+	},
+	sectionToggle: {
+		fontSize: 22,
+		color: "#0f172a",
+		fontFamily: FONT.bold,
+	},
+	sectionList: {
+		paddingBottom: 8,
 	},
 	row: {
 		justifyContent: "space-between",
@@ -332,103 +383,107 @@ const styles = StyleSheet.create({
 	},
 	card: {
 		width: "31.5%",
-		backgroundColor: "#f6f6f6",
-		borderRadius: 12,
+		backgroundColor: "#ffffff",
+		borderRadius: 22,
 		padding: 8,
 		alignItems: "center",
 		position: "relative",
+		shadowColor: "#0f172a",
+		shadowOpacity: 0.08,
+		shadowRadius: 12,
+		shadowOffset: { width: 0, height: 8 },
+		elevation: 5,
+	},
+	cardInfo: {
+		alignItems: "center",
+		paddingTop: 8,
 	},
 	image: {
 		width: "100%",
 		aspectRatio: 0.72,
-		borderRadius: 8,
-		marginBottom: 8,
+		borderRadius: 16,
 	},
 	name: {
 		fontSize: 12,
-		fontWeight: "600",
+		fontFamily: FONT.semiBold,
 		textAlign: "center",
-		minHeight: 32,
+		color: "#0f172a",
 	},
 	rarity: {
 		marginTop: 4,
-		fontSize: 11,
-		color: "#666",
+		fontSize: 12,
+		color: "#475569",
+		fontFamily: FONT.regular,
 		textTransform: "capitalize",
 	},
 	countBadge: {
 		position: "absolute",
-		top: 4,
-		right: 4,
-		backgroundColor: "#e3350d",
-		borderRadius: 10,
-		paddingHorizontal: 6,
-		paddingVertical: 2,
-		minWidth: 20,
-		alignItems: "center",
-		justifyContent: "center",
+		top: 8,
+		right: 8,
+		backgroundColor: "#0f172a",
+		borderRadius: 999,
+		paddingHorizontal: 7,
+		paddingVertical: 3,
 	},
 	countText: {
-		color: "#fff",
+		color: "#ffffff",
 		fontSize: 10,
-		fontWeight: "bold",
-	},
-	section: {
-		marginBottom: 16,
-	},
-	sectionHeader: {
-		backgroundColor: "#f9f9f9",
-		paddingVertical: 8,
-		paddingHorizontal: 12,
-		marginBottom: 8,
-		borderRadius: 8,
-		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "center",
-	},
-	sectionTitle: {
-		fontSize: 18,
-		fontWeight: "bold",
-		color: "#333",
-		flex: 1,
-	},
-	sectionToggle: {
-		fontSize: 22,
-		fontWeight: "700",
-		color: "#333",
-		marginLeft: 12,
+		fontFamily: FONT.bold,
 	},
 	collapsedText: {
 		textAlign: "center",
-		color: "#666",
-		fontSize: 14,
+		color: "#475569",
+		fontSize: 13,
+		fontFamily: FONT.regular,
 		paddingVertical: 12,
-	},
-	emptySection: {
-		paddingBottom: 0,
 	},
 	empty: {
 		textAlign: "center",
 		marginTop: 40,
 		fontSize: 16,
-		color: "#666",
+		color: "#475569",
+		fontFamily: FONT.regular,
 	},
 	modalOverlay: {
 		flex: 1,
-		backgroundColor: "rgba(0, 0, 0, 0.8)",
+		backgroundColor: "rgba(15, 23, 42, 0.8)",
 		justifyContent: "center",
 		alignItems: "center",
 	},
+	filterModalContent: {
+		width: "88%",
+		backgroundColor: "#ffffff",
+		borderRadius: 24,
+		padding: 18,
+	},
+	filterOption: {
+		paddingVertical: 14,
+		paddingHorizontal: 14,
+		borderRadius: 16,
+		marginBottom: 10,
+		backgroundColor: "#eff6ff",
+	},
+	filterOptionActive: {
+		backgroundColor: "#2563eb",
+	},
+	filterOptionText: {
+		fontSize: 15,
+		color: "#0f172a",
+		fontFamily: FONT.semiBold,
+	},
+	filterOptionTextActive: {
+		color: "#ffffff",
+	},
 	modalContent: {
-		width: "90%",
-		maxWidth: 400,
-		backgroundColor: "#fff",
-		borderRadius: 12,
-		padding: 20,
+		width: "88%",
+		backgroundColor: "#ffffff",
+		borderRadius: 28,
+		padding: 16,
 		alignItems: "center",
 	},
 	fullCardImage: {
 		width: "100%",
 		aspectRatio: 0.72,
+		borderRadius: 20,
 	},
 });

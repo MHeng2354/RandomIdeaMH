@@ -10,10 +10,12 @@ import {
 	Alert,
 	Image,
 	PanResponder,
+	Platform,
 	Pressable,
 	ScrollView,
 	StyleSheet,
 	Text,
+	useWindowDimensions,
 	View,
 } from "react-native";
 import Card from "../../components/Card";
@@ -41,6 +43,8 @@ export default function Pack() {
 		Poppins_600SemiBold,
 		Poppins_700Bold,
 	});
+	const { width } = useWindowDimensions();
+	const isCompact = width < 380;
 
 	const [selectedPack, setSelectedPack] = useState<PackType | null>(null);
 	const [selectedIndex, setSelectedIndex] = useState(0);
@@ -316,7 +320,7 @@ export default function Pack() {
 		return (
 			<View style={styles.center}>
 				<ActivityIndicator size="large" />
-				<Text style={styles.loadingText}>Loading No Lag Packs...</Text>
+				<Text style={styles.loadingText}>Loading Packs...</Text>
 			</View>
 		);
 	}
@@ -327,9 +331,11 @@ export default function Pack() {
 			contentContainerStyle={styles.container}
 			scrollEnabled={!showReveal}
 		>
-			<Text style={styles.title}>Pull Pokémon Pack</Text>
+			<Text style={[styles.title, isCompact && styles.compactTitle]}>
+				Pull Pokémon Pack
+			</Text>
 
-			<View style={styles.statusBox}>
+			<View style={[styles.statusBox, isCompact && styles.compactStatusBox]}>
 				<Text style={styles.statusText}>Ancestors: {ancestorText}</Text>
 				<Text style={styles.godPackChance}>
 					God Pack Chance: {(godPackChance * 100).toFixed(1)}%
@@ -344,22 +350,53 @@ export default function Pack() {
 						<Text style={styles.lastPackText}>Last Pulled Pack</Text>
 					)}
 
-					<View style={styles.packNavigator}>
-						<Pressable
-							style={styles.navButton}
-							onPress={handlePreviousPack}
-							disabled={openingPack || showReveal}
-						>
-							<Text style={styles.navButtonText}>‹</Text>
-						</Pressable>
+					<View
+						style={[
+							styles.packNavigator,
+							isCompact && styles.packNavigatorCompact,
+						]}
+					>
+						{isCompact ? (
+							<View style={styles.packControlsRow}>
+								<Pressable
+									style={styles.navButton}
+									onPress={handlePreviousPack}
+									disabled={openingPack || showReveal}
+								>
+									<Text style={styles.navButtonText}>‹</Text>
+								</Pressable>
+
+								<Pressable
+									style={styles.navButton}
+									onPress={handleNextPack}
+									disabled={openingPack || showReveal}
+								>
+									<Text style={styles.navButtonText}>›</Text>
+								</Pressable>
+							</View>
+						) : (
+							<Pressable
+								style={styles.navButton}
+								onPress={handlePreviousPack}
+								disabled={openingPack || showReveal}
+							>
+								<Text style={styles.navButtonText}>‹</Text>
+							</Pressable>
+						)}
 
 						<View
-							style={styles.currentPackCard}
+							style={[
+								styles.currentPackCard,
+								isCompact && styles.currentPackCardCompact,
+							]}
 							{...packPanResponder.panHandlers}
 						>
 							<Image
 								source={selectedPack.image}
-								style={styles.bigPackImage}
+								style={[
+									styles.bigPackImage,
+									isCompact && styles.bigPackImageCompact,
+								]}
 								resizeMode="cover"
 							/>
 
@@ -375,13 +412,15 @@ export default function Pack() {
 							</Text>
 						</View>
 
-						<Pressable
-							style={styles.navButton}
-							onPress={handleNextPack}
-							disabled={openingPack || showReveal}
-						>
-							<Text style={styles.navButtonText}>›</Text>
-						</Pressable>
+						{!isCompact && (
+							<Pressable
+								style={styles.navButton}
+								onPress={handleNextPack}
+								disabled={openingPack || showReveal}
+							>
+								<Text style={styles.navButtonText}>›</Text>
+							</Pressable>
+						)}
 					</View>
 
 					<View style={styles.dotRow}>
@@ -401,6 +440,7 @@ export default function Pack() {
 					<Pressable
 						style={[
 							styles.openButton,
+							isCompact && styles.fullWidthButton,
 							(openingPack || !selectedCardsReady || showReveal) &&
 								styles.disabledButton,
 						]}
@@ -445,6 +485,7 @@ export default function Pack() {
 					<Pressable
 						style={[
 							styles.pullAgainButton,
+							isCompact && styles.fullWidthButton,
 							openingPack && styles.disabledButton,
 						]}
 						onPress={handleOpenPack}
@@ -468,43 +509,67 @@ const FONT = {
 	bold: "Poppins_700Bold",
 };
 
+const ACCENT_FONT_FAMILY = Platform.select({
+	android: "sans-serif",
+	ios: "System",
+	default: "sans-serif",
+});
+
 const styles = StyleSheet.create({
 	container: {
 		padding: 20,
-		paddingTop: 45,
-		paddingBottom: 50,
+		paddingTop: 44,
+		paddingBottom: 52,
 		alignItems: "center",
-		backgroundColor: "#fff",
+		backgroundColor: "#f3f6fb",
 	},
 	center: {
 		flex: 1,
 		alignItems: "center",
 		justifyContent: "center",
-		backgroundColor: "#fff",
+		backgroundColor: "#f3f6fb",
 	},
 	loadingText: {
-		marginTop: 10,
+		marginTop: 12,
 		fontSize: 16,
 		fontFamily: FONT.regular,
+		color: "#334155",
 	},
 	title: {
-		fontSize: 28,
-		fontFamily: FONT.bold,
-		marginBottom: 12,
+		fontSize: 30,
+		fontFamily: ACCENT_FONT_FAMILY,
+		fontWeight: "700",
+		marginBottom: 14,
+		color: "#0f172a",
+		letterSpacing: 0.3,
+	},
+	compactTitle: {
+		fontSize: 24,
 	},
 	statusBox: {
 		width: "100%",
-		backgroundColor: "#f7f7f7",
-		borderRadius: 18,
-		paddingVertical: 12,
-		paddingHorizontal: 16,
+		backgroundColor: "#ffffff",
+		borderRadius: 24,
+		paddingVertical: 16,
+		paddingHorizontal: 18,
 		marginBottom: 18,
 		alignItems: "center",
+		shadowColor: "#0f172a",
+		shadowOpacity: 0.08,
+		shadowRadius: 10,
+		shadowOffset: { width: 0, height: 8 },
+		elevation: 4,
+		borderWidth: 1,
+		borderColor: "rgba(59,130,246,0.1)",
+	},
+	compactStatusBox: {
+		alignItems: "flex-start",
 	},
 	statusText: {
-		fontSize: 17,
+		fontSize: 18,
 		fontFamily: FONT.semiBold,
-		marginBottom: 4,
+		marginBottom: 6,
+		color: "#111827",
 	},
 	godPackChance: {
 		fontSize: 15,
@@ -514,24 +579,33 @@ const styles = StyleSheet.create({
 	packMenu: {
 		width: "100%",
 		alignItems: "center",
-		backgroundColor: "#f7f7f7",
-		borderRadius: 24,
+		backgroundColor: "#ffffff",
+		borderRadius: 28,
 		padding: 18,
+		shadowColor: "#0f172a",
+		shadowOpacity: 0.1,
+		shadowRadius: 16,
+		shadowOffset: { width: 0, height: 12 },
+		elevation: 8,
+		borderWidth: 1,
+		borderColor: "rgba(59,130,246,0.08)",
 	},
 	menuTitle: {
 		fontSize: 20,
 		fontFamily: FONT.bold,
 		marginBottom: 6,
+		color: "#0f172a",
 	},
 	lastPackText: {
-		backgroundColor: "#e3350d",
+		backgroundColor: "#0f73ff",
 		color: "#fff",
-		paddingHorizontal: 10,
-		paddingVertical: 4,
+		paddingHorizontal: 12,
+		paddingVertical: 5,
 		borderRadius: 999,
 		fontSize: 12,
 		fontFamily: FONT.bold,
 		marginBottom: 12,
+		letterSpacing: 0.3,
 	},
 	packNavigator: {
 		width: "100%",
@@ -539,13 +613,27 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "space-between",
 	},
+	packNavigatorCompact: {
+		flexDirection: "column",
+		gap: 12,
+	},
+	packControlsRow: {
+		width: "100%",
+		flexDirection: "row",
+		justifyContent: "space-between",
+	},
 	navButton: {
-		width: 44,
-		height: 44,
-		borderRadius: 22,
-		backgroundColor: "#3761a8",
+		width: 48,
+		height: 48,
+		borderRadius: 24,
+		backgroundColor: "#0f73ff",
 		alignItems: "center",
 		justifyContent: "center",
+		shadowColor: "#0f73ff",
+		shadowOpacity: 0.22,
+		shadowRadius: 12,
+		shadowOffset: { width: 0, height: 8 },
+		elevation: 6,
 	},
 	navButtonText: {
 		color: "#fff",
@@ -556,76 +644,114 @@ const styles = StyleSheet.create({
 	currentPackCard: {
 		width: "68%",
 		alignItems: "center",
-		backgroundColor: "#fff",
-		borderRadius: 22,
+		backgroundColor: "#ffffff",
+		borderRadius: 24,
 		padding: 16,
-		borderWidth: 2,
-		borderColor: "#ffcc00",
+		borderWidth: 1,
+		borderColor: "rgba(245,158,11,0.4)",
+		shadowColor: "#0f172a",
+		shadowOpacity: 0.12,
+		shadowRadius: 14,
+		shadowOffset: { width: 0, height: 10 },
+		elevation: 8,
+	},
+	currentPackCardCompact: {
+		width: "100%",
 	},
 	bigPackImage: {
 		width: 170,
 		height: 238,
-		borderRadius: 16,
+		borderRadius: 20,
 		marginBottom: 14,
+		backgroundColor: "#eef3ff",
+	},
+	bigPackImageCompact: {
+		width: "100%",
+		maxWidth: 220,
+		aspectRatio: 170 / 238,
+		height: undefined,
+		alignSelf: "center",
 	},
 	packName: {
 		fontSize: 18,
 		fontFamily: FONT.bold,
 		textAlign: "center",
+		color: "#111827",
 	},
 	packCounter: {
 		marginTop: 6,
 		fontSize: 13,
-		color: "#666",
+		color: "#64748b",
 		fontFamily: FONT.regular,
 	},
 	packPrice: {
 		marginTop: 6,
 		fontSize: 14,
-		color: "#555",
+		color: "#0f172a",
 		fontFamily: FONT.semiBold,
 	},
 	dotRow: {
 		flexDirection: "row",
 		gap: 8,
-		marginTop: 16,
+		marginTop: 18,
 		marginBottom: 18,
 	},
 	dot: {
-		width: 9,
-		height: 9,
+		width: 10,
+		height: 10,
 		borderRadius: 99,
-		backgroundColor: "#cfcfcf",
+		backgroundColor: "#cbd5e1",
 	},
 	activeDot: {
-		width: 24,
-		backgroundColor: "#3761a8",
+		width: 26,
+		backgroundColor: "#0f73ff",
 	},
 	openButton: {
-		minWidth: 230,
-		backgroundColor: "#e3350d",
-		paddingVertical: 14,
-		paddingHorizontal: 28,
+		minWidth: 240,
+		backgroundColor: "#0f73ff",
+		paddingVertical: 15,
+		paddingHorizontal: 30,
 		borderRadius: 999,
 		alignItems: "center",
+		shadowColor: "#0f73ff",
+		shadowOpacity: 0.24,
+		shadowRadius: 14,
+		shadowOffset: { width: 0, height: 8 },
+		elevation: 8,
+	},
+	fullWidthButton: {
+		alignSelf: "stretch",
+		minWidth: 0,
+		width: "100%",
 	},
 	disabledButton: {
-		opacity: 0.6,
+		opacity: 0.55,
 	},
 	openButtonText: {
-		color: "white",
+		color: "#ffffff",
 		fontSize: 16,
 		fontFamily: FONT.bold,
+		letterSpacing: 0.3,
 	},
 	resultSection: {
 		marginTop: 30,
 		width: "100%",
 		alignItems: "center",
+		paddingVertical: 18,
+		paddingHorizontal: 12,
+		borderRadius: 28,
+		backgroundColor: "#ffffff",
+		shadowColor: "#0f172a",
+		shadowOpacity: 0.08,
+		shadowRadius: 14,
+		shadowOffset: { width: 0, height: 10 },
+		elevation: 6,
 	},
 	resultTitle: {
 		fontSize: 24,
 		fontFamily: FONT.bold,
 		marginBottom: 16,
+		color: "#0f172a",
 	},
 	godPackTitle: {
 		color: "#b8860b",
@@ -635,25 +761,32 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		flexWrap: "wrap",
 		justifyContent: "center",
+		gap: 2,
 	},
 	savedText: {
-		marginTop: 16,
-		fontSize: 16,
-		color: "green",
-		fontFamily: FONT.bold,
+		marginTop: 18,
+		fontSize: 15,
+		color: "#0f9f6e",
+		fontFamily: ACCENT_FONT_FAMILY,
 	},
 	pullAgainButton: {
 		marginTop: 18,
-		minWidth: 210,
-		backgroundColor: "#3761a8",
+		minWidth: 230,
+		backgroundColor: "#0f73ff",
 		paddingVertical: 14,
-		paddingHorizontal: 28,
+		paddingHorizontal: 30,
 		borderRadius: 999,
 		alignItems: "center",
+		shadowColor: "#0f73ff",
+		shadowOpacity: 0.22,
+		shadowRadius: 12,
+		shadowOffset: { width: 0, height: 8 },
+		elevation: 7,
 	},
 	pullAgainButtonText: {
-		color: "white",
+		color: "#ffffff",
 		fontSize: 16,
 		fontFamily: FONT.bold,
+		letterSpacing: 0.2,
 	},
 });

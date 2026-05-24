@@ -5,15 +5,17 @@ import {
 	useFonts,
 } from "@expo-google-fonts/poppins";
 import { useRouter } from "expo-router";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	Alert,
 	Animated,
 	Image,
+	Platform,
 	Pressable,
 	StyleSheet,
 	Text,
+	useWindowDimensions,
 	View,
 } from "react-native";
 import { GameContext } from "../context/GameContext";
@@ -26,12 +28,13 @@ import {
 export default function WonderMissPlay() {
 	const router = useRouter();
 	const { addCards } = useContext(GameContext);
-
 	const [fontsLoaded] = useFonts({
 		Poppins_400Regular,
 		Poppins_600SemiBold,
 		Poppins_700Bold,
 	});
+	const { width } = useWindowDimensions();
+	const isCompact = width < 380;
 
 	const [cards, setCards] = useState<CardType[]>([]);
 	const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
@@ -44,13 +47,38 @@ export default function WonderMissPlay() {
 
 	const shuffleAnim = useRef(new Animated.Value(0)).current;
 
-	useEffect(() => {
-		init();
-	}, []);
+	const runShuffleAnimation = useCallback(
+		(sessionCards: CardType[]) => {
+			let count = 0;
+			const interval = setInterval(() => {
+				setCards((prev) => [...prev].sort(() => Math.random() - 0.5));
+				count += 1;
 
-	const init = async () => {
+				Animated.sequence([
+					Animated.timing(shuffleAnim, {
+						toValue: 1,
+						duration: 80,
+						useNativeDriver: true,
+					}),
+					Animated.timing(shuffleAnim, {
+						toValue: 0,
+						duration: 80,
+						useNativeDriver: true,
+					}),
+				]).start();
+
+				if (count >= 10) {
+					clearInterval(interval);
+					setCards([...sessionCards].sort(() => Math.random() - 0.5));
+					setShuffling(false);
+				}
+			}, 150);
+		},
+		[shuffleAnim],
+	);
+
+	const init = useCallback(async () => {
 		const session = await loadWherePickSession();
-
 		if (!session) {
 			Alert.alert("No Session", "Please start WonderMiss again.");
 			router.replace("/(tabs)/wondermiss");
@@ -61,42 +89,15 @@ export default function WonderMissPlay() {
 		setIsHighRareSession(session.isHighRareSession);
 		setLoading(false);
 		runShuffleAnimation(session.cards);
-	};
+	}, [router, runShuffleAnimation]);
 
-	const runShuffleAnimation = (sessionCards: CardType[]) => {
-		let count = 0;
-
-		const interval = setInterval(() => {
-			setCards((prev) => [...prev].sort(() => Math.random() - 0.5));
-			count += 1;
-
-			Animated.sequence([
-				Animated.timing(shuffleAnim, {
-					toValue: 1,
-					duration: 80,
-					useNativeDriver: true,
-				}),
-				Animated.timing(shuffleAnim, {
-					toValue: 0,
-					duration: 80,
-					useNativeDriver: true,
-				}),
-			]).start();
-
-			if (count >= 10) {
-				clearInterval(interval);
-				setCards([...sessionCards].sort(() => Math.random() - 0.5));
-				setShuffling(false);
-			}
-		}, 150);
-	};
+	useEffect(() => {
+		init();
+	}, [init]);
 
 	const chooseCard = async (card: CardType) => {
 		if (shuffling || selectedCard || revealing) return;
-
 		setSelectedCard(card);
-
-		// Start sequential reveal
 		setRevealing(true);
 		await revealCardsSequentially(card);
 	};
@@ -105,17 +106,14 @@ export default function WonderMissPlay() {
 		const otherCards = cards.filter((c) => c.id !== selectedCard.id);
 		const shuffledOthers = [...otherCards].sort(() => Math.random() - 0.5);
 
-		// Reveal other cards first, one by one
 		for (const card of shuffledOthers) {
-			await new Promise((resolve) => setTimeout(resolve, 800)); // 800ms delay between reveals
+			await new Promise((resolve) => setTimeout(resolve, 700));
 			setRevealedCards((prev) => new Set(prev).add(card.id));
 		}
 
-		// Finally reveal the selected card
-		await new Promise((resolve) => setTimeout(resolve, 800));
+		await new Promise((resolve) => setTimeout(resolve, 700));
 		setRevealedCards((prev) => new Set(prev).add(selectedCard.id));
 
-		// Add the card to collection after all reveals
 		if (!claimed) {
 			addCards([selectedCard]);
 			setClaimed(true);
@@ -137,7 +135,7 @@ export default function WonderMissPlay() {
 	if (!fontsLoaded || loading) {
 		return (
 			<View style={styles.center}>
-				<ActivityIndicator size="large" />
+				<ActivityIndicator size="large" color="#2563eb" />
 				<Text style={styles.loadingText}>Preparing WonderMiss...</Text>
 			</View>
 		);
@@ -145,21 +143,27 @@ export default function WonderMissPlay() {
 
 	return (
 		<View style={styles.container}>
-			<Text style={styles.title}>WonderMiss</Text>
-
-			{isHighRareSession && (
-				<Text style={styles.specialText}>Special High Rare Session!</Text>
-			)}
-
-			<Text style={styles.subtitle}>
-				{shuffling
-					? "Shuffling cards..."
-					: revealing
-						? "Revealing cards..."
-						: selectedCard
-							? "All cards revealed!"
-							: "Choose one card"}
-			</Text>
+			<View style={styles.heroCard}>
+				<Text style={[styles.title, isCompact && styles.compactTitle]}>
+					WonderMiss
+				</Text>
+				<Text style={[styles.subtitle, isCompact && styles.compactSubtitle]}>
+					{shuffling
+						? "Shuffling cards..."
+						: revealing
+							? "Revealing cards..."
+							: selectedCard
+								? "All cards revealed!"
+								: "Choose one card to reveal."}
+				</Text>
+				{isHighRareSession && (
+					<View style={styles.sessionBadge}>
+						<Text style={styles.sessionBadgeText}>
+							Special high-rare session
+						</Text>
+					</View>
+				)}
+			</View>
 
 			<Animated.View style={[styles.cardGrid, { transform: [{ translateX }] }]}>
 				{cards.map((card, index) => {
@@ -171,6 +175,7 @@ export default function WonderMissPlay() {
 							key={`${card.id}-${index}`}
 							style={[
 								styles.cardBox,
+								isCompact && styles.compactCardBox,
 								isSelected && isRevealed && styles.selectedBox,
 								selectedCard &&
 									!isSelected &&
@@ -181,16 +186,18 @@ export default function WonderMissPlay() {
 							disabled={shuffling || !!selectedCard || revealing}
 						>
 							{isRevealed ? (
-								<>
+								<View style={styles.revealedCardWrap}>
 									<Image
 										source={{ uri: card.image }}
 										style={styles.cardImage}
 										resizeMode="cover"
 									/>
 									{isSelected && (
-										<Text style={styles.selectedLabel}>Your Pick</Text>
+										<View style={styles.selectedLabel}>
+											<Text style={styles.selectedLabelText}>Your pick</Text>
+										</View>
 									)}
-								</>
+								</View>
 							) : (
 								<Image
 									source={require("../assets/images/card-back.png")}
@@ -208,8 +215,10 @@ export default function WonderMissPlay() {
 					<Text style={styles.resultTitle}>You got:</Text>
 					<Text style={styles.cardName}>{selectedCard.name}</Text>
 					<Text style={styles.rarity}>{formatRarity(selectedCard.rarity)}</Text>
-
-					<Pressable style={styles.doneButton} onPress={backToWonderMiss}>
+					<Pressable
+						style={[styles.doneButton, isCompact && styles.compactDoneButton]}
+						onPress={backToWonderMiss}
+					>
 						<Text style={styles.doneButtonText}>End WonderMiss</Text>
 					</Pressable>
 				</View>
@@ -238,72 +247,111 @@ const FONT = {
 	bold: "Poppins_700Bold",
 };
 
+const ACCENT_FONT_FAMILY = Platform.select({
+	android: "sans-serif",
+	ios: "System",
+	default: "sans-serif",
+});
+
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: "#fff",
-		padding: 20,
+		backgroundColor: "#f3f6fb",
+		paddingHorizontal: 18,
+		paddingTop: 28,
+		paddingBottom: 24,
 		alignItems: "center",
-		justifyContent: "center",
 	},
 	center: {
 		flex: 1,
-		backgroundColor: "#fff",
+		backgroundColor: "#f3f6fb",
 		alignItems: "center",
 		justifyContent: "center",
 	},
 	loadingText: {
-		marginTop: 10,
-		fontSize: 16,
+		marginTop: 12,
+		fontSize: 15,
 		fontFamily: FONT.regular,
+		color: "#475569",
+	},
+	heroCard: {
+		width: "100%",
+		backgroundColor: "#0f172a",
+		borderRadius: 28,
+		padding: 20,
+		shadowColor: "#0f172a",
+		shadowOpacity: 0.14,
+		shadowRadius: 18,
+		shadowOffset: { width: 0, height: 12 },
+		elevation: 8,
 	},
 	title: {
-		fontSize: 30,
+		fontSize: 28,
 		fontFamily: FONT.bold,
-		marginBottom: 8,
+		color: "#ffffff",
 	},
-	specialText: {
-		backgroundColor: "#b8860b",
-		color: "#fff",
+	compactTitle: {
+		fontSize: 24,
+	},
+	subtitle: {
+		marginTop: 8,
+		fontSize: 15,
+		fontFamily: FONT.semiBold,
+		color: "#cbd5e1",
+	},
+	compactSubtitle: {
+		fontSize: 14,
+	},
+	sessionBadge: {
+		marginTop: 14,
+		alignSelf: "flex-start",
 		paddingHorizontal: 12,
 		paddingVertical: 6,
 		borderRadius: 999,
-		fontSize: 13,
-		fontFamily: FONT.bold,
-		marginBottom: 12,
+		backgroundColor: "rgba(59,130,246,0.18)",
 	},
-	subtitle: {
-		fontSize: 17,
-		fontFamily: FONT.semiBold,
-		color: "#555",
-		marginBottom: 20,
+	sessionBadgeText: {
+		fontSize: 12,
+		fontFamily: FONT.bold,
+		color: "#ffffff",
 	},
 	cardGrid: {
 		width: "100%",
-		maxWidth: 420,
+		maxWidth: 460,
 		flexDirection: "row",
 		flexWrap: "wrap",
-		justifyContent: "center",
-		alignItems: "center",
-		gap: 12,
+		justifyContent: "space-between",
+		marginTop: 20,
 	},
 	cardBox: {
-		width: "29%",
+		width: "31.5%",
 		aspectRatio: 0.72,
-		backgroundColor: "#f4f4f4",
-		borderRadius: 14,
+		backgroundColor: "#ffffff",
+		borderRadius: 22,
 		overflow: "hidden",
 		alignItems: "center",
 		justifyContent: "center",
 		borderWidth: 2,
 		borderColor: "transparent",
+		shadowColor: "#0f172a",
+		shadowOpacity: 0.08,
+		shadowRadius: 14,
+		shadowOffset: { width: 0, height: 10 },
+		elevation: 5,
+		marginBottom: 12,
+	},
+	compactCardBox: {
+		width: "48%",
 	},
 	selectedBox: {
-		borderColor: "#ffcc00",
-		borderWidth: 4,
+		borderColor: "#f59e0b",
 	},
 	unselectedBox: {
-		opacity: 0.75,
+		opacity: 0.7,
+	},
+	revealedCardWrap: {
+		width: "100%",
+		height: "100%",
 	},
 	cardImage: {
 		width: "100%",
@@ -311,50 +359,66 @@ const styles = StyleSheet.create({
 	},
 	selectedLabel: {
 		position: "absolute",
-		bottom: 6,
-		backgroundColor: "#e3350d",
-		color: "#fff",
+		bottom: 10,
+		left: 10,
+		right: 10,
+		paddingVertical: 4,
 		paddingHorizontal: 8,
-		paddingVertical: 3,
 		borderRadius: 999,
+		backgroundColor: "rgba(15,23,42,0.85)",
+	},
+	selectedLabelText: {
 		fontSize: 10,
 		fontFamily: FONT.bold,
-		overflow: "hidden",
+		color: "#ffffff",
 	},
 	resultBox: {
 		marginTop: 24,
 		width: "100%",
+		backgroundColor: "#ffffff",
+		borderRadius: 24,
+		padding: 20,
 		alignItems: "center",
+		shadowColor: "#0f172a",
+		shadowOpacity: 0.08,
+		shadowRadius: 16,
+		shadowOffset: { width: 0, height: 10 },
+		elevation: 5,
 	},
 	resultTitle: {
-		fontSize: 15,
-		color: "#666",
+		fontSize: 13,
+		color: "#475569",
 		fontFamily: FONT.regular,
 	},
 	cardName: {
-		marginTop: 4,
-		fontSize: 20,
-		fontFamily: FONT.bold,
+		marginTop: 8,
+		fontSize: 22,
+		fontFamily: ACCENT_FONT_FAMILY,
+		color: "#0f172a",
 		textAlign: "center",
 	},
 	rarity: {
-		marginTop: 4,
+		marginTop: 6,
 		fontSize: 14,
-		color: "#666",
 		fontFamily: FONT.semiBold,
-		textAlign: "center",
+		color: "#2563eb",
 	},
 	doneButton: {
 		marginTop: 18,
 		minWidth: 220,
-		backgroundColor: "#e3350d",
+		backgroundColor: "#2563eb",
 		paddingVertical: 14,
-		paddingHorizontal: 28,
+		paddingHorizontal: 30,
 		borderRadius: 999,
 		alignItems: "center",
 	},
+	compactDoneButton: {
+		alignSelf: "stretch",
+		minWidth: 0,
+		width: "100%",
+	},
 	doneButtonText: {
-		color: "#fff",
+		color: "#ffffff",
 		fontSize: 16,
 		fontFamily: FONT.bold,
 	},
