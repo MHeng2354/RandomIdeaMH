@@ -20,17 +20,48 @@ import {
 } from "react-native";
 import Card from "../../components/Card";
 import CardRevealSwiper from "../../components/CardRevealSwiper";
+import LoadingScreen from "../../components/LoadingScreen";
 import { GameContext } from "../../context/GameContext";
 import { packs } from "../../data/packs";
 import { CardType, PackType } from "../../types/Card";
 import { fetchCardsBySet } from "../../utils/api";
 import {
+	loadGodModeEnabled,
+	loadGodPackPullCount,
 	loadLastPulledPack,
+	saveGodModeEnabled,
+	saveGodPackPullCount,
 	saveLastPulledPack,
 } from "../../utils/packStorage";
 import { openPack } from "../../utils/pullLogic";
 
 type CardCache = Record<string, CardType[]>;
+
+const GOD_PACK_BASE_CHANCE = 0.05;
+const GOD_PACK_STEP = 0.05;
+const GOD_PACK_GUARANTEE_PULL = 50;
+
+function getGodPackChanceFromPulls(pullCount: number) {
+	if (pullCount >= GOD_PACK_GUARANTEE_PULL - 1) {
+		return 1;
+	}
+
+	const stages = Math.floor(pullCount / 10);
+	return Math.min(GOD_PACK_BASE_CHANCE + stages * GOD_PACK_STEP, 1);
+}
+
+function getPackOrdinalLabel(position: number) {
+	const suffix =
+		position % 10 === 1 && position % 100 !== 11
+			? "st"
+			: position % 10 === 2 && position % 100 !== 12
+				? "nd"
+				: position % 10 === 3 && position % 100 !== 13
+					? "rd"
+					: "th";
+
+	return `${position}${suffix} pack`;
+}
 
 export default function Pack() {
 	const { ancestors, spendAncestors, addAncestors, addCards } =
@@ -50,13 +81,73 @@ export default function Pack() {
 	const [selectedIndex, setSelectedIndex] = useState(0);
 	const [lastPackId, setLastPackId] = useState<string | null>(null);
 	const [pulledCards, setPulledCards] = useState<CardType[]>([]);
+	const [savedCards, setSavedCards] = useState<CardType[]>([]);
 	const [cardCache, setCardCache] = useState<CardCache>({});
 	const [loadingPacks, setLoadingPacks] = useState(true);
 	const [openingPack, setOpeningPack] = useState(false);
 	const [showReveal, setShowReveal] = useState(false);
 	const [showResult, setShowResult] = useState(false);
-	const [godPackChance, setGodPackChance] = useState(0.05);
+	const [queuedPackResults, setQueuedPackResults] = useState<
+		Array<ReturnType<typeof openPack>>
+	>([]);
+	const [currentRevealIndex, setCurrentRevealIndex] = useState(0);
+	const [godPackPullCount, setGodPackPullCount] = useState(0);
+	const [hasLoadedGodPackPullCount, setHasLoadedGodPackPullCount] =
+		useState(false);
+	const [godModeEnabled, setGodModeEnabled] = useState(false);
+	const [hasLoadedGodMode, setHasLoadedGodMode] = useState(false);
+	const [openMode, setOpenMode] = useState<1 | 5>(1);
 	const [isGodPack, setIsGodPack] = useState(false);
+	const [currentRevealIsGodPack, setCurrentRevealIsGodPack] = useState(false);
+
+	useEffect(() => {
+		let active = true;
+
+		void loadGodPackPullCount().then((savedPullCount) => {
+			if (active) {
+				setGodPackPullCount(savedPullCount);
+				setHasLoadedGodPackPullCount(true);
+			}
+		});
+
+		return () => {
+			active = false;
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!hasLoadedGodPackPullCount) {
+			return;
+		}
+
+		void saveGodPackPullCount(godPackPullCount);
+	}, [godPackPullCount, hasLoadedGodPackPullCount]);
+
+	useEffect(() => {
+		let active = true;
+
+		void loadGodModeEnabled().then((enabled) => {
+			if (active) {
+				setGodModeEnabled(enabled);
+				setHasLoadedGodMode(true);
+			}
+		});
+
+		return () => {
+			active = false;
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!hasLoadedGodMode) {
+			return;
+		}
+
+		void saveGodModeEnabled(godModeEnabled);
+	}, [godModeEnabled, hasLoadedGodMode]);
+
+	const godPackChance = getGodPackChanceFromPulls(godPackPullCount);
+	const effectiveGodPackChance = godModeEnabled ? 0.5 : godPackChance;
 
 	const displayPacks = useMemo(() => {
 		if (!lastPackId) return packs;
@@ -191,9 +282,13 @@ export default function Pack() {
 		setSelectedIndex(fixedIndex);
 		setSelectedPack(displayPacks[fixedIndex]);
 		setPulledCards([]);
+		setSavedCards([]);
+		setQueuedPackResults([]);
+		setCurrentRevealIndex(0);
 		setShowReveal(false);
 		setShowResult(false);
 		setIsGodPack(false);
+		setCurrentRevealIsGodPack(false);
 	};
 
 	const handlePreviousPack = () => {
@@ -267,13 +362,11 @@ export default function Pack() {
 			return;
 		}
 
-		const ok = spendAncestors(selectedPack.price);
+		const totalCost = selectedPack.price * openMode;
+		const ok = spendAncestors(totalCost);
 
 		if (!ok) {
-			Alert.alert(
-				"Not Enough Ancestors",
-				`You need ${selectedPack.price} Ancestors.`,
-			);
+			Alert.alert("Not Enough Ancestors", `You need ${totalCost} Ancestors.`);
 			return;
 		}
 
@@ -281,29 +374,74 @@ export default function Pack() {
 		setShowReveal(false);
 		setShowResult(false);
 		setPulledCards([]);
+		setSavedCards([]);
+		setQueuedPackResults([]);
+		setCurrentRevealIndex(0);
 		setIsGodPack(false);
+		setCurrentRevealIsGodPack(false);
 
-		const result = openPack(cards, godPackChance);
-		const rewardAncestors = calculateAncestorReward(result.cards);
+		const batchResults = [] as Array<ReturnType<typeof openPack>>;
+		let nextPullCount = godPackPullCount;
+		let nextChance = getGodPackChanceFromPulls(nextPullCount);
 
-		setPulledCards(result.cards);
-		addCards(result.cards);
+		for (let index = 0; index < openMode; index += 1) {
+			const isGuaranteedPull =
+				!godModeEnabled && nextPullCount >= GOD_PACK_GUARANTEE_PULL - 1;
+			const currentChance = godModeEnabled
+				? 0.5
+				: isGuaranteedPull
+					? 1
+					: nextChance;
+			const result = openPack(cards, currentChance);
+
+			batchResults.push(result);
+
+			if (!godModeEnabled) {
+				nextPullCount = result.isGodPack ? 0 : nextPullCount + 1;
+				nextChance = getGodPackChanceFromPulls(nextPullCount);
+			}
+		}
+
+		const flattenedCards = batchResults.flatMap((result) => result.cards);
+		const rewardAncestors = batchResults.reduce(
+			(sum, result) => sum + calculateAncestorReward(result.cards),
+			0,
+		);
+		const hasGodPack = batchResults.some((result) => result.isGodPack);
+
+		setQueuedPackResults(batchResults);
+		setSavedCards(flattenedCards);
+		addCards(flattenedCards);
 		addAncestors(rewardAncestors);
-		setIsGodPack(result.isGodPack);
+		setIsGodPack(hasGodPack);
+		setCurrentRevealIsGodPack(batchResults[0]?.isGodPack ?? false);
 		setLastPackId(selectedPack.id);
 		await saveLastPulledPack(selectedPack.id);
 
-		if (result.isGodPack) {
-			setGodPackChance(0.05);
-		} else {
-			setGodPackChance((prev) => Math.min(prev + 0.001, 1));
+		if (!godModeEnabled) {
+			setGodPackPullCount(nextPullCount);
 		}
 
 		setOpeningPack(false);
+		setCurrentRevealIndex(0);
+		setPulledCards(batchResults[0].cards);
 		setShowReveal(true);
 	};
 
 	const handleRevealFinish = () => {
+		const nextIndex = currentRevealIndex + 1;
+
+		if (nextIndex < queuedPackResults.length) {
+			const nextResult = queuedPackResults[nextIndex];
+			setCurrentRevealIndex(nextIndex);
+			setPulledCards(nextResult.cards);
+			setCurrentRevealIsGodPack(nextResult.isGodPack);
+			return;
+		}
+
+		setCurrentRevealIndex(0);
+		setQueuedPackResults([]);
+		setCurrentRevealIsGodPack(false);
 		setShowReveal(false);
 		setShowResult(true);
 		setTimeout(() => {
@@ -315,13 +453,29 @@ export default function Pack() {
 	const selectedCardsReady = selectedPack
 		? !!cardCache[selectedPack.id]?.length
 		: false;
+	const totalPackCost = selectedPack ? selectedPack.price * openMode : 0;
+	const chanceLabel = godModeEnabled
+		? "50.0% (GOD Mode)"
+		: `${(effectiveGodPackChance * 100).toFixed(1)}%`;
+	const currentRevealLabel = getPackOrdinalLabel(currentRevealIndex + 1);
+
+	const handleSkipReveal = () => {
+		setCurrentRevealIndex(0);
+		setQueuedPackResults([]);
+		setCurrentRevealIsGodPack(false);
+		setShowReveal(false);
+		setShowResult(true);
+		setTimeout(() => {
+			scrollRef.current?.scrollToEnd({ animated: true });
+		}, 150);
+	};
 
 	if (!fontsLoaded || loadingPacks) {
 		return (
-			<View style={styles.center}>
-				<ActivityIndicator size="large" />
-				<Text style={styles.loadingText}>Loading Packs...</Text>
-			</View>
+			<LoadingScreen
+				title="Pull Pokémon Pack"
+				subtitle={!fontsLoaded ? "Loading fonts..." : "Loading cards..."}
+			/>
 		);
 	}
 
@@ -337,8 +491,9 @@ export default function Pack() {
 
 			<View style={[styles.statusBox, isCompact && styles.compactStatusBox]}>
 				<Text style={styles.statusText}>Ancestors: {ancestorText}</Text>
-				<Text style={styles.godPackChance}>
-					God Pack Chance: {(godPackChance * 100).toFixed(1)}%
+				<Text style={styles.godPackChance}>God Pack Chance: {chanceLabel}</Text>
+				<Text style={styles.counterText}>
+					Pulls since godpack: {godPackPullCount} / 50
 				</Text>
 			</View>
 
@@ -437,6 +592,46 @@ export default function Pack() {
 						))}
 					</View>
 
+					<View style={styles.openModeRow}>
+						<Pressable
+							style={[
+								styles.openModeButton,
+								openMode === 1 && styles.openModeButtonActive,
+							]}
+							onPress={() => setOpenMode(1)}
+							disabled={openingPack}
+						>
+							<Text
+								style={
+									openMode === 1
+										? styles.openModeButtonTextActive
+										: styles.openModeButtonText
+								}
+							>
+								1 Pack
+							</Text>
+						</Pressable>
+
+						<Pressable
+							style={[
+								styles.openModeButton,
+								openMode === 5 && styles.openModeButtonActive,
+							]}
+							onPress={() => setOpenMode(5)}
+							disabled={openingPack}
+						>
+							<Text
+								style={
+									openMode === 5
+										? styles.openModeButtonTextActive
+										: styles.openModeButtonText
+								}
+							>
+								5 Packs
+							</Text>
+						</Pressable>
+					</View>
+
 					<Pressable
 						style={[
 							styles.openButton,
@@ -452,7 +647,7 @@ export default function Pack() {
 						) : (
 							<Text style={styles.openButtonText}>
 								{selectedCardsReady
-									? `Open ${selectedPack.name}`
+									? `Open ${openMode === 1 ? `${openMode} Pack` : `${openMode} Packs`}`
 									: "Loading Pack..."}
 							</Text>
 						)}
@@ -463,8 +658,10 @@ export default function Pack() {
 			{showReveal && pulledCards.length > 0 && (
 				<CardRevealSwiper
 					cards={pulledCards}
-					isGodPack={isGodPack}
+					isGodPack={currentRevealIsGodPack}
+					packLabel={currentRevealLabel}
 					onFinish={handleRevealFinish}
+					onSkip={handleSkipReveal}
 				/>
 			)}
 
@@ -475,7 +672,7 @@ export default function Pack() {
 					</Text>
 
 					<View style={styles.cardGrid}>
-						{pulledCards.map((card, index) => (
+						{savedCards.map((card, index) => (
 							<Card key={`${card.id}-${index}`} card={card} />
 						))}
 					</View>
@@ -523,18 +720,6 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		backgroundColor: "#f3f6fb",
 	},
-	center: {
-		flex: 1,
-		alignItems: "center",
-		justifyContent: "center",
-		backgroundColor: "#f3f6fb",
-	},
-	loadingText: {
-		marginTop: 12,
-		fontSize: 16,
-		fontFamily: FONT.regular,
-		color: "#334155",
-	},
 	title: {
 		fontSize: 30,
 		fontFamily: ACCENT_FONT_FAMILY,
@@ -575,6 +760,12 @@ const styles = StyleSheet.create({
 		fontSize: 15,
 		color: "#b8860b",
 		fontFamily: FONT.bold,
+	},
+	counterText: {
+		fontSize: 15,
+		color: "#0f172a",
+		fontFamily: FONT.semiBold,
+		marginTop: 4,
 	},
 	packMenu: {
 		width: "100%",
@@ -705,6 +896,34 @@ const styles = StyleSheet.create({
 	activeDot: {
 		width: 26,
 		backgroundColor: "#0f73ff",
+	},
+	openModeRow: {
+		width: "100%",
+		flexDirection: "row",
+		justifyContent: "center",
+		gap: 12,
+		marginBottom: 16,
+	},
+	openModeButton: {
+		flex: 1,
+		paddingVertical: 12,
+		paddingHorizontal: 16,
+		borderRadius: 999,
+		backgroundColor: "#e2e8f0",
+		alignItems: "center",
+	},
+	openModeButtonActive: {
+		backgroundColor: "#0f73ff",
+	},
+	openModeButtonText: {
+		fontSize: 14,
+		fontFamily: FONT.bold,
+		color: "#0f172a",
+	},
+	openModeButtonTextActive: {
+		fontSize: 14,
+		fontFamily: FONT.bold,
+		color: "#ffffff",
 	},
 	openButton: {
 		minWidth: 240,

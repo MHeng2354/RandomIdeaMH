@@ -4,6 +4,7 @@ import {
 	Poppins_700Bold,
 	useFonts,
 } from "@expo-google-fonts/poppins";
+import { Audio } from "expo-av";
 import { useRouter } from "expo-router";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
@@ -24,6 +25,12 @@ import {
 	clearWherePickSession,
 	loadWherePickSession,
 } from "../utils/wherePickStorage";
+
+const HIGH_RARE_RARITIES = new Set<CardType["rarity"]>([
+	"illustrationRare",
+	"specialIllustrationRare",
+	"hyperRare",
+]);
 
 export default function WonderMissPlay() {
 	const router = useRouter();
@@ -46,6 +53,7 @@ export default function WonderMissPlay() {
 	const [revealing, setRevealing] = useState(false);
 
 	const shuffleAnim = useRef(new Animated.Value(0)).current;
+	const wonderMissSoundRef = useRef<Audio.Sound | null>(null);
 
 	const runShuffleAnimation = useCallback(
 		(sessionCards: CardType[]) => {
@@ -95,8 +103,69 @@ export default function WonderMissPlay() {
 		init();
 	}, [init]);
 
+	useEffect(() => {
+		let active = true;
+
+		void (async () => {
+			try {
+				await Audio.setAudioModeAsync({
+					playsInSilentModeIOS: true,
+					staysActiveInBackground: false,
+				});
+				const { sound } = await Audio.Sound.createAsync(
+					require("../assets/sounds/wondermiss-fallback.wav"),
+				);
+
+				if (active) {
+					wonderMissSoundRef.current = sound;
+				}
+			} catch {
+				// Ignore sound loading failures.
+			}
+		})();
+
+		return () => {
+			active = false;
+			void wonderMissSoundRef.current?.unloadAsync();
+			wonderMissSoundRef.current = null;
+		};
+	}, []);
+
+	const isHighRareCard = (card: CardType) =>
+		HIGH_RARE_RARITIES.has(card.rarity);
+
+	const playWonderMissSound = async () => {
+		const sound = wonderMissSoundRef.current;
+
+		if (!sound) {
+			return;
+		}
+
+		try {
+			await sound.stopAsync();
+			await sound.setPositionAsync(0);
+			await sound.setVolumeAsync(0);
+			await sound.playAsync();
+
+			for (let step = 1; step <= 4; step += 1) {
+				await sound.setVolumeAsync(step / 4);
+				await new Promise((resolve) => setTimeout(resolve, 35));
+			}
+
+			await new Promise((resolve) => setTimeout(resolve, 140));
+
+			for (let step = 3; step >= 0; step -= 1) {
+				await sound.setVolumeAsync(step / 4);
+				await new Promise((resolve) => setTimeout(resolve, 35));
+			}
+		} catch {
+			// Ignore playback failures.
+		}
+	};
+
 	const chooseCard = async (card: CardType) => {
 		if (shuffling || selectedCard || revealing) return;
+
 		setSelectedCard(card);
 		setRevealing(true);
 		await revealCardsSequentially(card);
@@ -113,6 +182,10 @@ export default function WonderMissPlay() {
 
 		await new Promise((resolve) => setTimeout(resolve, 700));
 		setRevealedCards((prev) => new Set(prev).add(selectedCard.id));
+
+		if (!isHighRareCard(selectedCard)) {
+			void playWonderMissSound();
+		}
 
 		if (!claimed) {
 			addCards([selectedCard]);

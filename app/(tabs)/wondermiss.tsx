@@ -19,6 +19,7 @@ import {
 	useWindowDimensions,
 	View,
 } from "react-native";
+import LoadingScreen from "../../components/LoadingScreen";
 import { GameContext } from "../../context/GameContext";
 import { packs } from "../../data/packs";
 import { CardType } from "../../types/Card";
@@ -98,15 +99,10 @@ export default function WonderMiss() {
 
 	if (!fontsLoaded || loading) {
 		return (
-			<SafeAreaView style={styles.safeArea}>
-				<View style={styles.center}>
-					<ActivityIndicator size="large" color="#2563eb" />
-					<Text style={styles.loadingTitle}>WonderMiss</Text>
-					<Text style={styles.loadingText}>
-						{!fontsLoaded ? "Loading fonts..." : "Loading card selection..."}
-					</Text>
-				</View>
-			</SafeAreaView>
+			<LoadingScreen
+				title="WonderMiss"
+				subtitle={!fontsLoaded ? "Loading fonts..." : "Loading cards..."}
+			/>
 		);
 	}
 
@@ -344,19 +340,6 @@ const styles = StyleSheet.create({
 		fontSize: 12,
 		color: "#ffffff",
 		fontFamily: FONT.semiBold,
-	},
-	loadingTitle: {
-		marginTop: 14,
-		fontSize: 28,
-		fontFamily: FONT.bold,
-		color: "#0f172a",
-	},
-	loadingText: {
-		marginTop: 6,
-		fontSize: 14,
-		fontFamily: FONT.regular,
-		color: "#475569",
-		textAlign: "center",
 	},
 	cardGrid: {
 		marginTop: 18,

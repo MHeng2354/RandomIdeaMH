@@ -21,7 +21,9 @@ import { CardType } from "../types/Card";
 type Props = {
 	cards: CardType[];
 	isGodPack: boolean;
+	packLabel: string;
 	onFinish: () => void;
+	onSkip: () => void;
 };
 
 const { width } = Dimensions.get("window");
@@ -30,7 +32,9 @@ const SWIPE_DISTANCE = 20;
 export default function CardRevealSwiper({
 	cards,
 	isGodPack,
+	packLabel,
 	onFinish,
+	onSkip,
 }: Props) {
 	const [fontsLoaded] = useFonts({
 		Poppins_400Regular,
@@ -45,6 +49,10 @@ export default function CardRevealSwiper({
 	const currentCard = cards[index];
 	const isLastCard = index === cards.length - 1;
 	const isLastCardRef = useRef(isLastCard);
+
+	useEffect(() => {
+		setIndex(0);
+	}, [cards]);
 
 	useEffect(() => {
 		dragOffset.setValue(0);
@@ -116,6 +124,8 @@ export default function CardRevealSwiper({
 				{isGodPack ? "GOD PACK!" : "Card Reveal"}
 			</Text>
 
+			<Text style={styles.packLabel}>{packLabel}</Text>
+
 			<Text style={styles.counter}>
 				Card {index + 1} / {cards.length}
 			</Text>
@@ -150,11 +160,17 @@ export default function CardRevealSwiper({
 				{isLastCard ? "Swipe or tap Finish" : "Swipe card to reveal next"}
 			</Text>
 
-			<Pressable style={styles.nextButton} onPress={goNextRef.current}>
-				<Text style={styles.nextButtonText}>
-					{isLastCard ? "Finish" : "Reveal Next"}
-				</Text>
-			</Pressable>
+			<View style={styles.buttonRow}>
+				<Pressable style={styles.skipButton} onPress={onSkip}>
+					<Text style={styles.skipButtonText}>Skip Reveal</Text>
+				</Pressable>
+
+				<Pressable style={styles.nextButton} onPress={goNextRef.current}>
+					<Text style={styles.nextButtonText}>
+						{isLastCard ? "Finish" : "Reveal Next"}
+					</Text>
+				</Pressable>
+			</View>
 		</View>
 	);
 }
@@ -213,6 +229,16 @@ const styles = StyleSheet.create({
 	godTitle: {
 		color: "#b8860b",
 		fontSize: 30,
+	},
+	packLabel: {
+		fontSize: 14,
+		fontFamily: FONT.semiBold,
+		color: "#0f172a",
+		marginBottom: 12,
+		paddingHorizontal: 14,
+		paddingVertical: 6,
+		borderRadius: 999,
+		backgroundColor: "rgba(59,130,246,0.08)",
 	},
 	counter: {
 		fontSize: 14,
@@ -274,14 +300,24 @@ const styles = StyleSheet.create({
 		color: "#64748b",
 		fontFamily: FONT.regular,
 	},
-	nextButton: {
+	buttonRow: {
+		flexDirection: "row",
+		gap: 12,
 		marginTop: 16,
-		minWidth: 230,
+		width: "83%",
+		justifyContent: "center",
+		alignItems: "center",
+		alignSelf: "center",
+	},
+	nextButton: {
+		flex: 1,
+		minWidth: 0,
 		backgroundColor: "#0f73ff",
 		paddingVertical: 14,
-		paddingHorizontal: 30,
+		paddingHorizontal: 18,
 		borderRadius: 999,
 		alignItems: "center",
+		justifyContent: "center",
 		shadowColor: "#0f73ff",
 		shadowOpacity: 0.24,
 		shadowRadius: 14,
@@ -292,5 +328,24 @@ const styles = StyleSheet.create({
 		color: "#fff",
 		fontSize: 16,
 		fontFamily: FONT.bold,
+		textAlign: "center",
+	},
+	skipButton: {
+		flex: 1,
+		minWidth: 0,
+		backgroundColor: "#ffffff",
+		paddingVertical: 14,
+		paddingHorizontal: 18,
+		borderRadius: 999,
+		alignItems: "center",
+		justifyContent: "center",
+		borderWidth: 1,
+		borderColor: "rgba(15,23,42,0.12)",
+	},
+	skipButtonText: {
+		color: "#0f172a",
+		fontSize: 14,
+		fontFamily: FONT.bold,
+		textAlign: "center",
 	},
 });

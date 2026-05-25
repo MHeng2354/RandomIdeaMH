@@ -7,7 +7,7 @@ import {
 } from "@expo-google-fonts/poppins";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import {
 	ActivityIndicator,
 	Pressable,
@@ -19,10 +19,17 @@ import {
 	View,
 } from "react-native";
 import { GameContext } from "../../context/GameContext";
+import {
+	loadGodModeEnabled,
+	saveGodModeEnabled,
+} from "../../utils/packStorage";
 
 export default function HomeScreen() {
 	const router = useRouter();
 	const { ancestors, collection } = useContext(GameContext);
+
+	const [godModeEnabled, setGodModeEnabled] = useState(false);
+	const [hasLoadedGodMode, setHasLoadedGodMode] = useState(false);
 
 	const [fontsLoaded] = useFonts({
 		Poppins_400Regular,
@@ -32,6 +39,33 @@ export default function HomeScreen() {
 	});
 	const { width } = useWindowDimensions();
 	const isCompact = width < 380;
+
+	useEffect(() => {
+		let active = true;
+
+		void loadGodModeEnabled().then((enabled) => {
+			if (active) {
+				setGodModeEnabled(enabled);
+				setHasLoadedGodMode(true);
+			}
+		});
+
+		return () => {
+			active = false;
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!hasLoadedGodMode) {
+			return;
+		}
+
+		void saveGodModeEnabled(godModeEnabled);
+	}, [godModeEnabled, hasLoadedGodMode]);
+
+	const toggleGodMode = () => {
+		setGodModeEnabled((prev) => !prev);
+	};
 
 	if (!fontsLoaded) {
 		return (
@@ -164,6 +198,24 @@ export default function HomeScreen() {
 						onPress={() => router.push("/(tabs)/wondermiss")}
 					>
 						<Text style={styles.actionButtonText}>Try WonderMiss</Text>
+					</Pressable>
+
+					<Pressable
+						style={[
+							styles.actionButton,
+							godModeEnabled && styles.godModeActiveButton,
+						]}
+						onPress={toggleGodMode}
+					>
+						<Text
+							style={
+								godModeEnabled
+									? styles.godModeActiveText
+									: styles.actionButtonText
+							}
+						>
+							{godModeEnabled ? "GOD Mode: ON" : "GOD Mode"}
+						</Text>
 					</Pressable>
 				</View>
 
@@ -377,6 +429,17 @@ const styles = StyleSheet.create({
 		fontSize: 15,
 		color: "#0f172a",
 		fontFamily: FONT.semiBold,
+		textAlign: "center",
+	},
+	godModeActiveButton: {
+		backgroundColor: "#fef3c7",
+		borderWidth: 1,
+		borderColor: "rgba(245,158,11,0.55)",
+	},
+	godModeActiveText: {
+		fontSize: 15,
+		color: "#92400e",
+		fontFamily: FONT.bold,
 		textAlign: "center",
 	},
 	missionCard: {
