@@ -7,7 +7,7 @@ import {
 } from "@expo-google-fonts/poppins";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	Pressable,
@@ -30,6 +30,8 @@ export default function HomeScreen() {
 
 	const [godModeEnabled, setGodModeEnabled] = useState(false);
 	const [hasLoadedGodMode, setHasLoadedGodMode] = useState(false);
+	const godModeEnabledRef = useRef(godModeEnabled);
+	const hasUserToggledGodModeRef = useRef(false);
 
 	const [fontsLoaded] = useFonts({
 		Poppins_400Regular,
@@ -41,12 +43,25 @@ export default function HomeScreen() {
 	const isCompact = width < 380;
 
 	useEffect(() => {
+		godModeEnabledRef.current = godModeEnabled;
+	}, [godModeEnabled]);
+
+	useEffect(() => {
 		let active = true;
 
 		void loadGodModeEnabled().then((enabled) => {
-			if (active) {
+			if (!active) {
+				return;
+			}
+
+			if (!hasUserToggledGodModeRef.current) {
 				setGodModeEnabled(enabled);
-				setHasLoadedGodMode(true);
+			}
+
+			setHasLoadedGodMode(true);
+
+			if (hasUserToggledGodModeRef.current) {
+				void saveGodModeEnabled(godModeEnabledRef.current);
 			}
 		});
 
@@ -64,6 +79,7 @@ export default function HomeScreen() {
 	}, [godModeEnabled, hasLoadedGodMode]);
 
 	const toggleGodMode = () => {
+		hasUserToggledGodModeRef.current = true;
 		setGodModeEnabled((prev) => !prev);
 	};
 
@@ -201,9 +217,10 @@ export default function HomeScreen() {
 					</Pressable>
 
 					<Pressable
-						style={[
+						style={({ pressed }) => [
 							styles.actionButton,
 							godModeEnabled && styles.godModeActiveButton,
+							pressed && styles.actionButtonPressed,
 						]}
 						onPress={toggleGodMode}
 					>
@@ -214,7 +231,7 @@ export default function HomeScreen() {
 									: styles.actionButtonText
 							}
 						>
-							{godModeEnabled ? "GOD Mode: ON" : "GOD Mode"}
+							{godModeEnabled ? "GOD Mode: ON" : "GOD Mode: OFF"}
 						</Text>
 					</Pressable>
 				</View>
@@ -419,11 +436,18 @@ const styles = StyleSheet.create({
 		borderRadius: 18,
 		paddingVertical: 14,
 		paddingHorizontal: 18,
+		minHeight: 52,
+		borderWidth: 1.5,
+		borderColor: "rgb(255, 255, 255)",
+		justifyContent: "center",
 		shadowColor: "#0f172a",
 		shadowOpacity: 0.08,
 		shadowRadius: 14,
-		shadowOffset: { width: 0, height: 8 },
 		elevation: 4,
+	},
+	actionButtonPressed: {
+		opacity: 0.86,
+		transform: [{ scale: 0.985 }],
 	},
 	actionButtonText: {
 		fontSize: 15,
@@ -433,8 +457,12 @@ const styles = StyleSheet.create({
 	},
 	godModeActiveButton: {
 		backgroundColor: "#fef3c7",
-		borderWidth: 1,
-		borderColor: "rgba(245,158,11,0.55)",
+		borderWidth: 1.5,
+		borderColor: "#f59e0b",
+		shadowColor: "#f59e0b",
+		shadowOpacity: 0.24,
+		shadowRadius: 14,
+		elevation: 4,
 	},
 	godModeActiveText: {
 		fontSize: 15,

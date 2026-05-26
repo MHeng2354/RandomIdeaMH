@@ -1,6 +1,23 @@
-# Welcome to your Expo app 👋
+﻿# Pokémon TCG Budget
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Pokémon TCG Budget is an Expo-based mobile prototype that lets players open Pokémon TCG packs, reveal cards, manage a personal collection, and explore a fast-paced WonderMiss mode to chase rare pulls.
+
+## What the app does
+
+- Open booster packs and reveal pulled cards in the pack screen
+- Browse and filter your collection by rarity in the Pokédex-style collection view
+- Run a curated WonderMiss session with six selected cards and a quick reveal flow
+- Track your Ancestors balance and persist progress locally using Async Storage
+- Enable God Mode for a higher chance of premium pulls
+
+## Tech stack
+
+- Expo SDK 54
+- Expo Router and file-based navigation
+- React Native 0.81
+- TypeScript
+- Async Storage for local state persistence
+- Expo Vector Icons and Google Fonts for the UI
 
 ## Get started
 
@@ -10,41 +27,67 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Start the development server
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+3. Open it on a device or emulator
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+   - Android emulator or physical device
+   - iOS simulator or physical device
+   - Expo Go for quick testing
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Export / build for mobile
 
-## Get a fresh project
+### Android
 
-When you're ready, run:
+- Build an Android APK or AAB with Expo managed workflow:
+
+  ```bash
+  npx eas build --platform android
+  ```
+
+- Run the Android app locally from the project:
+
+  ```bash
+  npm run android
+  ```
+
+### iOS
+
+- Build an iOS app with EAS Build:
+
+  ```bash
+  npx eas build --platform ios
+  ```
+
+- Run the iOS app locally from the project:
+
+  ```bash
+  npm run ios
+  ```
+
+## Useful commands
+
+- `npm run web` — run the web version
+- `npm run lint` — check for lint issues
+
+## Project structure
+
+- `app/` — Expo Router screens and navigation
+- `components/` — reusable UI components
+- `context/` — shared game state
+- `data/` — pack metadata
+- `utils/` — pull logic, storage helpers, and API wrappers
+
+## Notes
+
+This app fetches card data from the Pokémon TCG API and stores local session data so your collection, last pack, and God Mode setting persist between launches.
+
+If you want to reset the starter structure, run:
 
 ```bash
 npm run reset-project
 ```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.

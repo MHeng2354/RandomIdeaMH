@@ -62,23 +62,26 @@ export default function CardRevealSwiper({
 		isLastCardRef.current = isLastCard;
 	}, [isLastCard]);
 
-	const goNext = useCallback(() => {
-		if (isLastCardRef.current) {
-			onFinish();
-			return;
-		}
+	const goNext = useCallback(
+		(direction: "left" | "right" = "left") => {
+			if (isLastCardRef.current) {
+				onFinish();
+				return;
+			}
 
-		dragOffset.stopAnimation();
+			dragOffset.stopAnimation();
 
-		Animated.timing(dragOffset, {
-			toValue: -width,
-			duration: 180,
-			useNativeDriver: true,
-		}).start(() => {
-			dragOffset.setValue(0);
-			setIndex((prev) => prev + 1);
-		});
-	}, [dragOffset, onFinish]);
+			Animated.timing(dragOffset, {
+				toValue: direction === "left" ? -width : width,
+				duration: 180,
+				useNativeDriver: true,
+			}).start(() => {
+				dragOffset.setValue(0);
+				setIndex((prev) => prev + 1);
+			});
+		},
+		[dragOffset, onFinish],
+	);
 
 	useEffect(() => {
 		goNextRef.current = goNext;
@@ -95,7 +98,7 @@ export default function CardRevealSwiper({
 			},
 			onPanResponderRelease: (_, gesture) => {
 				if (Math.abs(gesture.dx) > SWIPE_DISTANCE || isLastCardRef.current) {
-					goNextRef.current();
+					goNext(gesture.dx >= 0 ? "right" : "left");
 					return;
 				}
 

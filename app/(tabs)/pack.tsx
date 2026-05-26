@@ -4,6 +4,7 @@ import {
 	Poppins_700Bold,
 	useFonts,
 } from "@expo-google-fonts/poppins";
+import { useFocusEffect } from "expo-router";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
@@ -88,7 +89,7 @@ export default function Pack() {
 	const [showReveal, setShowReveal] = useState(false);
 	const [showResult, setShowResult] = useState(false);
 	const [queuedPackResults, setQueuedPackResults] = useState<
-		Array<ReturnType<typeof openPack>>
+		ReturnType<typeof openPack>[]
 	>([]);
 	const [currentRevealIndex, setCurrentRevealIndex] = useState(0);
 	const [godPackPullCount, setGodPackPullCount] = useState(0);
@@ -123,20 +124,20 @@ export default function Pack() {
 		void saveGodPackPullCount(godPackPullCount);
 	}, [godPackPullCount, hasLoadedGodPackPullCount]);
 
+	const refreshGodMode = async () => {
+		const enabled = await loadGodModeEnabled();
+		setGodModeEnabled(enabled);
+		setHasLoadedGodMode(true);
+		return enabled;
+	};
+
 	useEffect(() => {
-		let active = true;
-
-		void loadGodModeEnabled().then((enabled) => {
-			if (active) {
-				setGodModeEnabled(enabled);
-				setHasLoadedGodMode(true);
-			}
-		});
-
-		return () => {
-			active = false;
-		};
+		void refreshGodMode();
 	}, []);
+
+	useFocusEffect(() => {
+		void refreshGodMode();
+	});
 
 	useEffect(() => {
 		if (!hasLoadedGodMode) {
@@ -299,25 +300,43 @@ export default function Pack() {
 		handleSelectPackByIndex(selectedIndex + 1);
 	};
 
+	const currentPackHandlers = useRef({
+		handleNextPack,
+		handlePreviousPack,
+	});
+	currentPackHandlers.current = {
+		handleNextPack,
+		handlePreviousPack,
+	};
+
 	const packPanResponder = useRef(
 		PanResponder.create({
+			onStartShouldSetPanResponder: () => true,
+			onStartShouldSetPanResponderCapture: () => true,
 			onMoveShouldSetPanResponder: (_, gesture) => {
 				return (
 					Math.abs(gesture.dx) > Math.abs(gesture.dy) &&
 					Math.abs(gesture.dx) > 12
 				);
 			},
+			onMoveShouldSetPanResponderCapture: (_, gesture) => {
+				return (
+					Math.abs(gesture.dx) > Math.abs(gesture.dy) &&
+					Math.abs(gesture.dx) > 12
+				);
+			},
+			onShouldBlockNativeResponder: () => true,
 			onPanResponderRelease: (_, gesture) => {
 				if (Math.abs(gesture.dx) < 70) {
 					return;
 				}
 
 				if (gesture.dx < 0) {
-					handleNextPack();
+					currentPackHandlers.current.handleNextPack();
 					return;
 				}
 
-				handlePreviousPack();
+				currentPackHandlers.current.handlePreviousPack();
 			},
 		}),
 	).current;
@@ -370,6 +389,9 @@ export default function Pack() {
 			return;
 		}
 
+		const latestGodModeEnabled = await loadGodModeEnabled();
+		setGodModeEnabled(latestGodModeEnabled);
+
 		setOpeningPack(true);
 		setShowReveal(false);
 		setShowResult(false);
@@ -380,14 +402,14 @@ export default function Pack() {
 		setIsGodPack(false);
 		setCurrentRevealIsGodPack(false);
 
-		const batchResults = [] as Array<ReturnType<typeof openPack>>;
+		const batchResults = [] as ReturnType<typeof openPack>[];
 		let nextPullCount = godPackPullCount;
 		let nextChance = getGodPackChanceFromPulls(nextPullCount);
 
 		for (let index = 0; index < openMode; index += 1) {
 			const isGuaranteedPull =
-				!godModeEnabled && nextPullCount >= GOD_PACK_GUARANTEE_PULL - 1;
-			const currentChance = godModeEnabled
+				!latestGodModeEnabled && nextPullCount >= GOD_PACK_GUARANTEE_PULL - 1;
+			const currentChance = latestGodModeEnabled
 				? 0.5
 				: isGuaranteedPull
 					? 1
@@ -396,7 +418,7 @@ export default function Pack() {
 
 			batchResults.push(result);
 
-			if (!godModeEnabled) {
+			if (!latestGodModeEnabled) {
 				nextPullCount = result.isGodPack ? 0 : nextPullCount + 1;
 				nextChance = getGodPackChanceFromPulls(nextPullCount);
 			}
@@ -418,7 +440,7 @@ export default function Pack() {
 		setLastPackId(selectedPack.id);
 		await saveLastPulledPack(selectedPack.id);
 
-		if (!godModeEnabled) {
+		if (!latestGodModeEnabled) {
 			setGodPackPullCount(nextPullCount);
 		}
 
@@ -453,7 +475,6 @@ export default function Pack() {
 	const selectedCardsReady = selectedPack
 		? !!cardCache[selectedPack.id]?.length
 		: false;
-	const totalPackCost = selectedPack ? selectedPack.price * openMode : 0;
 	const chanceLabel = godModeEnabled
 		? "50.0% (GOD Mode)"
 		: `${(effectiveGodPackChance * 100).toFixed(1)}%`;

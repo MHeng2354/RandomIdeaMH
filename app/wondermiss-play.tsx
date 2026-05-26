@@ -144,20 +144,7 @@ export default function WonderMissPlay() {
 		try {
 			await sound.stopAsync();
 			await sound.setPositionAsync(0);
-			await sound.setVolumeAsync(0);
 			await sound.playAsync();
-
-			for (let step = 1; step <= 4; step += 1) {
-				await sound.setVolumeAsync(step / 4);
-				await new Promise((resolve) => setTimeout(resolve, 35));
-			}
-
-			await new Promise((resolve) => setTimeout(resolve, 140));
-
-			for (let step = 3; step >= 0; step -= 1) {
-				await sound.setVolumeAsync(step / 4);
-				await new Promise((resolve) => setTimeout(resolve, 35));
-			}
 		} catch {
 			// Ignore playback failures.
 		}
