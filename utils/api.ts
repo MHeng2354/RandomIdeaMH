@@ -1,4 +1,4 @@
-import { CardType, ShinyRarity } from "../types/Card";
+import { CardType } from "../types/Card";
 
 const API_URL = "https://api.pokemontcg.io/v2/cards";
 
@@ -26,61 +26,22 @@ function mapRarity(rarity?: string): CardType["rarity"] {
 	if (value.includes("special illustration rare"))
 		return "specialIllustrationRare";
 	if (value.includes("illustration rare")) return "illustrationRare";
-	if (value.includes("shiny ultra rare")) return "ultraRare";
 	if (value.includes("ultra rare")) return "ultraRare";
-	if (value.includes("shiny rare")) return "rare";
 	if (value.includes("rare")) return "rare";
 	if (value.includes("uncommon")) return "uncommon";
 
 	return "common";
 }
 
-function isShinyCard(card: PokemonApiCard, selectedSetId: string): boolean {
-	const rarity = card.rarity?.toLowerCase() ?? "";
-	const cardNumber = card.number?.toUpperCase() ?? "";
-	const setId = card.set?.id?.toLowerCase() ?? selectedSetId.toLowerCase();
-	const setName = card.set?.name?.toLowerCase() ?? "";
+function normalizeSetIds(setIds: string | string[]): string[] {
+	const normalized = Array.isArray(setIds) ? setIds : [setIds];
 
-	const hasShinyRarity =
-		rarity.includes("shiny rare") ||
-		rarity.includes("shiny ultra rare") ||
-		rarity.includes("shiny vault") ||
-		rarity.includes("shiny");
-
-	const isShinyVaultCardNumber = cardNumber.startsWith("SV");
-
-	const isShinySet =
-		setId === "sv4pt5" ||
-		setId === "swsh45sv" ||
-		setName.includes("paldean fates") ||
-		setName.includes("shiny vault") ||
-		setName.includes("shining fates") ||
-		setName.includes("hidden fates");
-
-	return hasShinyRarity || (isShinyVaultCardNumber && isShinySet);
-}
-
-function mapShinyRarity(card: PokemonApiCard): ShinyRarity {
-	const rarity = card.rarity?.toLowerCase() ?? "";
-
-	if (
-		rarity.includes("special illustration") ||
-		rarity.includes("illustration") ||
-		rarity.includes("hyper")
-	) {
-		return "illustrationShiny";
-	}
-
-	if (rarity.includes("shiny ultra rare") || rarity.includes("ultra rare")) {
-		return "fullShiny";
-	}
-
-	return "normalShiny";
+	return [...new Set(normalized.map((setId) => setId.trim()).filter(Boolean))];
 }
 
 const fetchCache = new Map<string, Promise<CardType[]>>();
 
-export async function fetchCardsBySet(setId: string): Promise<CardType[]> {
+async function fetchCardsBySingleSet(setId: string): Promise<CardType[]> {
 	const cached = fetchCache.get(setId);
 
 	if (cached) {
@@ -99,17 +60,11 @@ export async function fetchCardsBySet(setId: string): Promise<CardType[]> {
 		const json = await response.json();
 
 		return json.data.map((card: PokemonApiCard) => {
-			const canBeShiny = isShinyCard(card, setId);
-
 			return {
 				id: card.id,
 				name: card.name,
 				image: card.images.large || card.images.small,
 				rarity: mapRarity(card.rarity),
-				isShiny: false,
-				shinyType: undefined,
-				canBeShiny,
-				shinyRarity: canBeShiny ? mapShinyRarity(card) : undefined,
 			};
 		});
 	})();
@@ -121,4 +76,23 @@ export async function fetchCardsBySet(setId: string): Promise<CardType[]> {
 	});
 
 	return request;
+}
+
+export async function fetchCardsBySet(
+	setIds: string | string[],
+): Promise<CardType[]> {
+	const normalizedSetIds = normalizeSetIds(setIds);
+	const results = await Promise.all(
+		normalizedSetIds.map((setId) => fetchCardsBySingleSet(setId)),
+	);
+	const mergedCards = results.flat();
+	const uniqueCards = new Map<string, CardType>();
+
+	for (const card of mergedCards) {
+		if (!uniqueCards.has(card.id)) {
+			uniqueCards.set(card.id, card);
+		}
+	}
+
+	return Array.from(uniqueCards.values());
 }

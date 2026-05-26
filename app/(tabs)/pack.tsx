@@ -166,7 +166,7 @@ export default function Pack() {
 			return;
 		}
 
-		const cards = await fetchCardsBySet(pack.setId);
+		const cards = await fetchCardsBySet(pack.setIds);
 
 		setCardCache((prev) => ({
 			...prev,

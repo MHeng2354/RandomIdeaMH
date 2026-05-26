@@ -25,7 +25,7 @@ export type CardType = {
 export type PackType = {
 	id: string;
 	name: string;
-	setId: string;
+	setIds: string[];
 	price: number;
 	image: ImageSourcePropType;
 };

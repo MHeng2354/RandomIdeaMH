@@ -1,18 +1,6 @@
 import { Image, StyleSheet, Text, View } from "react-native";
 import { CardType } from "../types/Card";
 
-function getShinyRarityLabel(shinyRarity?: string): string {
-	switch (shinyRarity) {
-		case "fullShiny":
-			return "FULL SHINY";
-		case "illustrationShiny":
-			return "ILLUSTRATION SHINY";
-		case "normalShiny":
-		default:
-			return "SHINY";
-	}
-}
-
 function formatRarity(rarity: CardType["rarity"]) {
 	const labels: Record<CardType["rarity"], string> = {
 		common: "Common",
@@ -36,13 +24,10 @@ export default function Card({ card }: { card: CardType }) {
 					style={styles.image}
 					resizeMode="cover"
 				/>
-				<View style={styles.imageGlow} />
-				{card.isShiny && (
-					<View style={styles.shinyBadge}>
-						<Text style={styles.shinyText}>
-							{getShinyRarityLabel(card.shinyRarity)}
-						</Text>
-					</View>
+				{(card.rarity === "ultraRare" ||
+					card.rarity === "illustrationRare" ||
+					card.rarity === "specialIllustrationRare" || card.rarity === "hyperRare") && (
+					<View style={styles.imageGlow} />
 				)}
 			</View>
 			<Text style={styles.name}>{card.name}</Text>
